@@ -1,0 +1,13 @@
+package {{.PackageName}}
+
+import "hostamat/pkg/platforma/database"
+
+type Repository struct{}
+
+func NewRepository() *Repository {
+	return &Repository{}
+}
+
+func (r *Repository) Schema() ([]database.Migration, database.Schema) {
+	return []database.Migration{}, database.Schema{}
+}
