@@ -3,12 +3,13 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"hostamat/pkg/platforma/log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"text/template"
+
+	"github.com/mishankov/platforma/log"
 )
 
 func generateCommand(args []string) {

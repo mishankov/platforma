@@ -3,7 +3,8 @@ package session
 import (
 	"context"
 	"database/sql"
-	"hostamat/pkg/platforma/database"
+
+	"github.com/mishankov/platforma/database"
 )
 
 type db interface {

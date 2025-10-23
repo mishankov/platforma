@@ -1,8 +1,9 @@
 package main
 
 import (
-	"hostamat/pkg/platforma/internal/cli"
 	"os"
+
+	"github.com/mishankov/platforma/internal/cli"
 )
 
 func main() {

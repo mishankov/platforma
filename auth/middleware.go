@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"hostamat/pkg/platforma/log"
+	"github.com/mishankov/platforma/log"
 )
 
 type userService interface {

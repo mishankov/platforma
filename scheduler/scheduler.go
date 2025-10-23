@@ -2,9 +2,10 @@ package scheduler
 
 import (
 	"context"
-	"hostamat/pkg/platforma/application"
-	"hostamat/pkg/platforma/log"
 	"time"
+
+	"github.com/mishankov/platforma/application"
+	"github.com/mishankov/platforma/log"
 
 	"github.com/google/uuid"
 )

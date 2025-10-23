@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"hostamat/pkg/platforma/application"
-	"hostamat/pkg/platforma/scheduler"
 	"testing"
 	"time"
+
+	"github.com/mishankov/platforma/application"
+	"github.com/mishankov/platforma/scheduler"
 )
 
 func TestSuccessRun(t *testing.T) {

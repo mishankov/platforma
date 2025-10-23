@@ -3,8 +3,9 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"hostamat/pkg/platforma/log"
 	"net/http"
+
+	"github.com/mishankov/platforma/log"
 )
 
 type ChangePasswordHandler struct {

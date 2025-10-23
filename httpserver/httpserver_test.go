@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"hostamat/pkg/platforma/httpserver"
+	"github.com/mishankov/platforma/httpserver"
 )
 
 // testHandler is a simple handler for testing

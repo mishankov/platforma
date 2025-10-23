@@ -3,12 +3,13 @@ package httpserver
 import (
 	"context"
 	"errors"
-	"hostamat/pkg/platforma/log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/mishankov/platforma/log"
 )
 
 type HttpServer struct {

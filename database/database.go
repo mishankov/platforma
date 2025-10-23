@@ -2,9 +2,10 @@ package database
 
 import (
 	"context"
-	"hostamat/pkg/platforma/log"
 	"slices"
 	"time"
+
+	"github.com/mishankov/platforma/log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"

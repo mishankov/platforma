@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"hostamat/pkg/platforma/httpclient"
+	"github.com/mishankov/platforma/httpclient"
 )
 
 const timeout = 10 * time.Second

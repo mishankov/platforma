@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hostamat/pkg/platforma/log"
 	"time"
+
+	"github.com/mishankov/platforma/log"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"hostamat/pkg/platforma/httpserver"
+	"github.com/mishankov/platforma/httpserver"
 )
 
 // panicHandler is a test handler that panics with a specific message

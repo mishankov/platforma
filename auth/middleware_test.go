@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"hostamat/pkg/platforma/auth"
+	"github.com/mishankov/platforma/auth"
 )
 
 func TestAuthenticationMiddleware_ValidSession(t *testing.T) {

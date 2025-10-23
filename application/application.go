@@ -3,10 +3,11 @@ package application
 import (
 	"context"
 	"fmt"
-	"hostamat/pkg/platforma/database"
-	"hostamat/pkg/platforma/log"
 	"sync"
 	"time"
+
+	"github.com/mishankov/platforma/database"
+	"github.com/mishankov/platforma/log"
 )
 
 // ErrDatabaseMigrationFailed is an error type that represents a failed database migration.

@@ -2,8 +2,9 @@ package httpserver
 
 import (
 	"context"
-	"hostamat/pkg/platforma/log"
 	"net/http"
+
+	"github.com/mishankov/platforma/log"
 
 	"github.com/google/uuid"
 )

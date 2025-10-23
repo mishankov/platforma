@@ -1,10 +1,11 @@
 package httpclient
 
 import (
-	"hostamat/pkg/platforma/log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mishankov/platforma/log"
 )
 
 type Client struct {

@@ -1,6 +1,6 @@
 package cli
 
-import "hostamat/pkg/platforma/log"
+import "github.com/mishankov/platforma/log"
 
 func Run(args []string) {
 	command := args[1]
