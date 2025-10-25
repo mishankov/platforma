@@ -57,7 +57,10 @@ func generateCommand(args []string) {
 }
 
 func writeFromTemplate(folder, file, templatePath string, data any) error {
-	os.MkdirAll(folder, 0755)
+	err := os.MkdirAll(folder, 0755)
+	if err != nil {
+		return err
+	}
 
 	// Get the directory of the current CLI package
 	_, filename, _, _ := runtime.Caller(0)

@@ -1,6 +1,17 @@
 version: "2"
 
 linters:
+  # condider to add: cyclop, err113
   default: none
   enable:
     - bodyclose
+    - containedctx
+    - dupl
+    - errcheck
+    
+  
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+        - errcheck
