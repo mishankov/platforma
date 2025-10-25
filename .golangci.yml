@@ -23,6 +23,8 @@ linters:
     - govet
     - iface
     - intrange
+    - makezero
+    - mirror
 
   settings:
     iface:
