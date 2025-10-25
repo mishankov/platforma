@@ -18,6 +18,8 @@ linters:
     - goconst
     - gocritic
     - godoclint
+    - godox
+    - gosec
     
   exclusions:
     rules:
@@ -25,3 +27,4 @@ linters:
         linters:
         - err113
         - errcheck
+        - gosec

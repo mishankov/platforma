@@ -57,7 +57,7 @@ func generateCommand(args []string) {
 }
 
 func writeFromTemplate(folder, file, templatePath string, data any) error {
-	err := os.MkdirAll(folder, 0755)
+	err := os.MkdirAll(folder, 0750)
 	if err != nil {
 		return err
 	}
@@ -66,6 +66,7 @@ func writeFromTemplate(folder, file, templatePath string, data any) error {
 	_, filename, _, _ := runtime.Caller(0)
 	cliDir := filepath.Dir(filename)
 	fullTemplatePath := filepath.Join(cliDir, templatePath)
+	fullTemplatePath = filepath.Clean(fullTemplatePath)
 
 	templateContent, err := os.ReadFile(fullTemplatePath)
 	if err != nil {
@@ -83,7 +84,7 @@ func writeFromTemplate(folder, file, templatePath string, data any) error {
 		return fmt.Errorf("failed to execute template %s: %w", fullTemplatePath, err)
 	}
 
-	err = os.WriteFile(filepath.Join(folder, file), buf.Bytes(), 0644)
+	err = os.WriteFile(filepath.Join(folder, file), buf.Bytes(), 0600)
 	if err != nil {
 		return err
 	}

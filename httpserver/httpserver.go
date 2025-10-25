@@ -47,8 +47,9 @@ func (s *HttpServer) UseFunc(middlewareFuncs ...func(http.Handler) http.Handler)
 
 func (s *HttpServer) Run(ctx context.Context) error {
 	server := &http.Server{
-		Addr:    ":" + s.port,
-		Handler: wrapHandlerInMiddleware(s.mux, s.middlewares),
+		Addr:              ":" + s.port,
+		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
+		ReadHeaderTimeout: 1 * time.Second,
 	}
 
 	go func() {
