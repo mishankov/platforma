@@ -57,8 +57,4 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(sessionId); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
 }
