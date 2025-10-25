@@ -9,6 +9,9 @@ linters:
     - dupl
     - err113
     - errcheck
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
     
   exclusions:
     rules:
