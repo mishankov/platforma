@@ -66,9 +66,8 @@ func writeFromTemplate(folder, file, templatePath string, data any) error {
 	_, filename, _, _ := runtime.Caller(0)
 	cliDir := filepath.Dir(filename)
 	fullTemplatePath := filepath.Join(cliDir, templatePath)
-	fullTemplatePath = filepath.Clean(fullTemplatePath)
 
-	templateContent, err := os.ReadFile(fullTemplatePath)
+	templateContent, err := os.ReadFile(fullTemplatePath) //nolint:gosec // Known path in compile time
 	if err != nil {
 		return fmt.Errorf("failed to read template %s: %w", fullTemplatePath, err)
 	}
