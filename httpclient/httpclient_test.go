@@ -59,5 +59,9 @@ func TestDo_Error(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for non-existent server, got nil")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 }
