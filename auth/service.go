@@ -129,7 +129,7 @@ func (s *Service) CookieName() string {
 func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPassword string) error {
 	user := UserFromContext(ctx)
 	if user == nil {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 
 	if s.passwordValidator != nil {
@@ -157,11 +157,11 @@ func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPasswo
 
 func defaultPasswordValidator(password string) error {
 	if len(password) < 8 {
-		return errors.New("short password")
+		return ErrShortPassword
 	}
 
 	if len(password) > 100 {
-		return errors.New("long password")
+		return ErrLongPassword
 	}
 
 	return nil
@@ -169,11 +169,11 @@ func defaultPasswordValidator(password string) error {
 
 func defaultUsernameValidator(username string) error {
 	if len(username) < 5 {
-		return errors.New("short username")
+		return ErrShortUsername
 	}
 
 	if len(username) > 20 {
-		return errors.New("long username")
+		return ErrLongUsername
 	}
 
 	return nil
