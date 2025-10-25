@@ -12,6 +12,8 @@ linters:
     - exhaustive
     - fatcontext
     - forcetypeassert
+    - gocheckcompilerdirectives
+    - gochecknoglobals
     
   exclusions:
     rules:

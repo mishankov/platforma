@@ -18,7 +18,7 @@ type logger interface {
 	ErrorContext(ctx context.Context, msg string, args ...any)
 }
 
-var Logger logger = slog.Default()
+var Logger logger = slog.Default() //nolint:gochecknoglobals
 
 // SetDefault sets the default logger used by the package-level logging functions.
 func SetDefault(l logger) {
@@ -35,14 +35,6 @@ const (
 	UserIdKey      contextKey = "userId"
 )
 
-var defaultKeys = []contextKey{
-	DomainNameKey,
-	TraceIdKey,
-	ServiceNameKey,
-	StartupTaskKey,
-	UserIdKey,
-}
-
 type contextHandler struct {
 	slog.Handler
 	additionKeys map[string]any
@@ -50,6 +42,14 @@ type contextHandler struct {
 
 // Handle processes the log record by adding context values before passing it to the underlying handler.
 func (h *contextHandler) Handle(ctx context.Context, r slog.Record) error {
+	var defaultKeys = []contextKey{
+		DomainNameKey,
+		TraceIdKey,
+		ServiceNameKey,
+		StartupTaskKey,
+		UserIdKey,
+	}
+
 	for _, key := range defaultKeys {
 		if value, ok := ctx.Value(key).(string); ok {
 			r.AddAttrs(slog.String(string(key), value))
