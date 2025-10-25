@@ -51,8 +51,9 @@ func TestDo_Error(t *testing.T) {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Error("expected error for non-existent server, got nil")
 	}
+	defer resp.Body.Close()
 }
