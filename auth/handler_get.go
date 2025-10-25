@@ -3,6 +3,8 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/mishankov/platforma/log"
 )
 
 type GetHandler struct {
@@ -48,5 +50,8 @@ func (h *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Username: user.Username,
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to decode response to json", "error", err)
+	}
 }

@@ -16,7 +16,7 @@ func TestSuccessRun(t *testing.T) {
 
 	buf := bytes.Buffer{}
 	s := scheduler.New(1*time.Second, application.RunnerFunc(func(ctx context.Context) error {
-		buf.Write([]byte("1"))
+		buf.WriteString("1")
 		return nil
 	}))
 
@@ -34,7 +34,7 @@ func TestErrorRun(t *testing.T) {
 
 	buf := bytes.Buffer{}
 	s := scheduler.New(1*time.Second, application.RunnerFunc(func(ctx context.Context) error {
-		buf.Write([]byte("1"))
+		buf.WriteString("1")
 		return errors.New("some error")
 	}))
 
@@ -52,7 +52,7 @@ func TestContextDecline(t *testing.T) {
 
 	buf := bytes.Buffer{}
 	s := scheduler.New(1*time.Second, application.RunnerFunc(func(ctx context.Context) error {
-		buf.Write([]byte("1"))
+		buf.WriteString("1")
 		return nil
 	}))
 

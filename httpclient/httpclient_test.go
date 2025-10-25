@@ -36,7 +36,11 @@ func TestDo_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Do() failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
@@ -51,8 +55,13 @@ func TestDo_Error(t *testing.T) {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Error("expected error for non-existent server, got nil")
 	}
+	defer func() {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 }

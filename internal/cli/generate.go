@@ -57,14 +57,17 @@ func generateCommand(args []string) {
 }
 
 func writeFromTemplate(folder, file, templatePath string, data any) error {
-	os.MkdirAll(folder, 0755)
+	err := os.MkdirAll(folder, 0750)
+	if err != nil {
+		return err
+	}
 
 	// Get the directory of the current CLI package
 	_, filename, _, _ := runtime.Caller(0)
 	cliDir := filepath.Dir(filename)
 	fullTemplatePath := filepath.Join(cliDir, templatePath)
 
-	templateContent, err := os.ReadFile(fullTemplatePath)
+	templateContent, err := os.ReadFile(fullTemplatePath) //nolint:gosec // Known path in compile time
 	if err != nil {
 		return fmt.Errorf("failed to read template %s: %w", fullTemplatePath, err)
 	}
@@ -80,7 +83,7 @@ func writeFromTemplate(folder, file, templatePath string, data any) error {
 		return fmt.Errorf("failed to execute template %s: %w", fullTemplatePath, err)
 	}
 
-	err = os.WriteFile(filepath.Join(folder, file), buf.Bytes(), 0644)
+	err = os.WriteFile(filepath.Join(folder, file), buf.Bytes(), 0600)
 	if err != nil {
 		return err
 	}

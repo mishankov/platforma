@@ -15,7 +15,7 @@ type TraceId struct {
 	header     string
 }
 
-// NewTraceId returns a new TraceId middleware.
+// NewTraceIdMiddleware returns a new TraceId middleware.
 // If key is nil, log.TraceIdKey is used.
 // If header is empty, "Platforma-Trace-Id" is used.
 func NewTraceIdMiddleware(contextKey any, header string) *TraceId {

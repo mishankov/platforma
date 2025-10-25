@@ -116,7 +116,7 @@ func TestRecoverMiddleware_MultiplePanics(t *testing.T) {
 	wrappedHandler := middleware.Wrap(handler)
 
 	// Test multiple requests to ensure middleware continues to work
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
 		w := httptest.NewRecorder()
 
