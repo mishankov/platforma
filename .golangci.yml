@@ -25,6 +25,11 @@ linters:
     - intrange
     - makezero
     - mirror
+    - musttag
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
 
   settings:
     iface:
@@ -40,3 +45,4 @@ linters:
         - err113
         - errcheck
         - gosec
+        - nilnil

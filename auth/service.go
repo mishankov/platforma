@@ -62,7 +62,7 @@ func (s *Service) GetFromSession(ctx context.Context, sessionId string) (*User, 
 	}
 
 	if userId == "" {
-		return nil, nil
+		return nil, ErrUserNotFound
 	}
 
 	return s.Get(ctx, userId)
