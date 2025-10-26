@@ -11,6 +11,8 @@ import (
 )
 
 func TestAuthenticationMiddleware_ValidSession(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users: map[string]*auth.User{
 			"valid-session-id": {ID: "user-id", Username: "testuser"},
@@ -23,7 +25,7 @@ func TestAuthenticationMiddleware_ValidSession(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: "valid-session-id"})
 	w := httptest.NewRecorder()
 
@@ -35,6 +37,8 @@ func TestAuthenticationMiddleware_ValidSession(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_NoSessionCookie(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		cookieName: "session",
 	}
@@ -44,7 +48,7 @@ func TestAuthenticationMiddleware_NoSessionCookie(t *testing.T) {
 		t.Fatal("handler should not be called when authentication fails")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -55,6 +59,8 @@ func TestAuthenticationMiddleware_NoSessionCookie(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_InvalidSession(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users:      map[string]*auth.User{},
 		cookieName: "session",
@@ -65,7 +71,7 @@ func TestAuthenticationMiddleware_InvalidSession(t *testing.T) {
 		t.Fatal("handler should not be called when authentication fails")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: "invalid-session-id"})
 	w := httptest.NewRecorder()
 
@@ -77,6 +83,8 @@ func TestAuthenticationMiddleware_InvalidSession(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_UserServiceError(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		error:      errors.New("database error"),
 		cookieName: "session",
@@ -87,7 +95,7 @@ func TestAuthenticationMiddleware_UserServiceError(t *testing.T) {
 		t.Fatal("handler should not be called when authentication fails")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: "session-id"})
 	w := httptest.NewRecorder()
 
@@ -99,6 +107,8 @@ func TestAuthenticationMiddleware_UserServiceError(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_UserNotFound(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users:      map[string]*auth.User{},
 		cookieName: "session",
@@ -109,7 +119,7 @@ func TestAuthenticationMiddleware_UserNotFound(t *testing.T) {
 		t.Fatal("handler should not be called when authentication fails")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "session", Value: "session-id"})
 	w := httptest.NewRecorder()
 
@@ -130,10 +140,11 @@ func (m *mockUserService) GetFromSession(ctx context.Context, sessionId string) 
 	if m.error != nil {
 		return nil, m.error
 	}
+
 	if user, ok := m.users[sessionId]; ok {
 		return user, nil
 	}
-	return nil, nil
+	return nil, auth.ErrUserNotFound
 }
 
 func (m *mockUserService) CookieName() string {

@@ -1,0 +1,75 @@
+version: "2"
+
+linters:
+  # consider to add: cyclop
+  #  find sane settings for revive
+  default: none
+  enable:
+    - bodyclose
+    - containedctx
+    - dupl
+    - err113
+    - errcheck
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - godoclint
+    - godox
+    - gosec
+    - govet
+    - iface
+    - intrange
+    - makezero
+    - mirror
+    - musttag
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - staticcheck
+    - tagalign
+    - tagliatelle
+    - testableexamples
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - wrapcheck
+
+  settings:
+    iface:
+      enable:
+        - identical # Identifies interfaces in the same package that have identical method sets.
+        - unused # Identifies interfaces that are not used anywhere in the same package where the interface is defined.
+        - opaque # Identifies functions that return interfaces, but the actual returned value is always a single concrete implementation.
+
+    tagliatelle:
+      case:
+        rules:
+          json: camel
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+        - err113
+        - errcheck
+        - gosec
+        - nilnil
+
+formatters:
+  enable:
+    - gofmt

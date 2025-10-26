@@ -26,6 +26,8 @@ func (h *normalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRecoverMiddleware_NormalOperation(t *testing.T) {
+	t.Parallel()
+
 	// Setup
 	middleware := httpserver.NewRecoverMiddleware()
 	handler := &normalHandler{}
@@ -52,6 +54,8 @@ func TestRecoverMiddleware_NormalOperation(t *testing.T) {
 }
 
 func TestRecoverMiddleware_PanicRecovery(t *testing.T) {
+	t.Parallel()
+
 	middleware := httpserver.NewRecoverMiddleware()
 	handler := &panicHandler{panicMessage: "test panic"}
 	wrappedHandler := middleware.Wrap(handler)
@@ -78,6 +82,8 @@ func TestRecoverMiddleware_PanicRecovery(t *testing.T) {
 }
 
 func TestRecoverMiddleware_ErrorResponse(t *testing.T) {
+	t.Parallel()
+
 	middleware := httpserver.NewRecoverMiddleware()
 	handler := &panicHandler{panicMessage: "specific error for testing"}
 	wrappedHandler := middleware.Wrap(handler)
@@ -111,12 +117,14 @@ func TestRecoverMiddleware_ErrorResponse(t *testing.T) {
 }
 
 func TestRecoverMiddleware_MultiplePanics(t *testing.T) {
+	t.Parallel()
+
 	middleware := httpserver.NewRecoverMiddleware()
 	handler := &panicHandler{panicMessage: "first panic"}
 	wrappedHandler := middleware.Wrap(handler)
 
 	// Test multiple requests to ensure middleware continues to work
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
 		w := httptest.NewRecorder()
 

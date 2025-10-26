@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/mishankov/platforma/database"
 )
@@ -46,7 +47,7 @@ func (r *Repository) Get(ctx context.Context, id string) (*User, error) {
 	var user User
 	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = $1", id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
 	return &user, nil
 }
@@ -55,7 +56,7 @@ func (r *Repository) GetByUsername(ctx context.Context, username string) (*User,
 	var user User
 	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE username = $1", username)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user by username: %w", err)
 	}
 	return &user, nil
 }
@@ -66,7 +67,10 @@ func (r *Repository) Create(ctx context.Context, user *User) error {
 		VALUES (:id, :username, :password, :salt, :created, :updated, :status)
 	`
 	_, err := r.db.NamedExecContext(ctx, query, user)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) UpdatePassword(ctx context.Context, id, password, salt string) error {
@@ -76,5 +80,8 @@ func (r *Repository) UpdatePassword(ctx context.Context, id, password, salt stri
 		WHERE id = $3
 	`
 	_, err := r.db.ExecContext(ctx, query, password, salt, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
 }

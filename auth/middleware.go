@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/mishankov/platforma/log"
@@ -29,20 +30,23 @@ func (m *AuthenticationMiddleware) Wrap(next http.Handler) http.Handler {
 		}
 
 		user, err := m.userService.GetFromSession(r.Context(), cookie.Value)
+		if errors.Is(err, ErrUserNotFound) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		if err != nil {
 			http.Error(w, "failed to get user", http.StatusInternalServerError)
 			return
 		}
 
-		if user == nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
+		newRequest := r
+		if user != nil {
+			ctxWithUserId := context.WithValue(r.Context(), log.UserIdKey, user.ID)
+			ctxWithUser := context.WithValue(ctxWithUserId, UserContextKey, user)
+			newRequest = r.WithContext(ctxWithUser)
 		}
 
-		ctxWithUserId := context.WithValue(r.Context(), log.UserIdKey, user.ID)
-		ctxWithUser := context.WithValue(ctxWithUserId, UserContextKey, user)
-		requestWithUser := r.WithContext(ctxWithUser)
-
-		next.ServeHTTP(w, requestWithUser)
+		next.ServeHTTP(w, newRequest)
 	})
 }

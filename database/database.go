@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -20,7 +21,7 @@ type Database struct {
 func New(connection string) (*Database, error) {
 	db, err := sqlx.Connect("postgres", connection)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]shemer)}, nil
 }
@@ -35,14 +36,14 @@ func (db *Database) RegisterRepository(name string, repository any) {
 
 func (db *Database) Migrate(ctx context.Context) error {
 	if _, err := db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)"); err != nil {
-		return err
+		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
 	// Select data from platforma_migrations table
 	var migrationsState []migrations
 	err := db.SelectContext(ctx, &migrationsState, "SELECT * FROM platforma_migrations")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to select migrations state: %w", err)
 	}
 
 	appliedMigrations := []Migration{}
@@ -59,7 +60,7 @@ func (db *Database) Migrate(ctx context.Context) error {
 		if !repoHasMigrations {
 			for _, query := range repoSchema.Queries {
 				if _, err := db.ExecContext(ctx, query); err != nil {
-					migrationErr = err
+					migrationErr = fmt.Errorf("failed to execute schema query: %w", err)
 					break
 				}
 				log.InfoContext(ctx, "schema applied", "repository", repoName)
@@ -67,13 +68,13 @@ func (db *Database) Migrate(ctx context.Context) error {
 
 			// Log that schema applied
 			if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, timestamp) VALUES ($1, $2)", repoName, time.Now()); err != nil {
-				return err
+				return fmt.Errorf("failed to insert migration record: %w", err)
 			}
 
 			// If schema is applied, log that all migrations are also applied
 			for _, migration := range repoMigrations {
 				if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, id, timestamp) VALUES ($1, $2, $3)", repoName, migration.ID, time.Now()); err != nil {
-					return err
+					return fmt.Errorf("failed to insert migration record: %w", err)
 				}
 			}
 
@@ -93,7 +94,7 @@ func (db *Database) Migrate(ctx context.Context) error {
 			}
 
 			if _, err := db.ExecContext(ctx, migration.Up); err != nil {
-				migrationErr = err
+				migrationErr = fmt.Errorf("failed to apply migration %s for repository %s: %w", migration.ID, repoName, err)
 				log.ErrorContext(ctx, "failed to apply migration for repository", "migration", migration.ID, "repository", repoName)
 				break
 			}
@@ -103,7 +104,7 @@ func (db *Database) Migrate(ctx context.Context) error {
 
 			// Log that migration applied
 			if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, id, timestamp) VALUES ($1, $2, $3)", repoName, migration.ID, time.Now()); err != nil {
-				return err
+				return fmt.Errorf("failed to insert migration record: %w", err)
 			}
 		}
 
@@ -116,11 +117,11 @@ func (db *Database) Migrate(ctx context.Context) error {
 		for _, migration := range slices.Backward(appliedMigrations) {
 			if _, err := db.ExecContext(ctx, migration.Down); err != nil {
 				log.ErrorContext(ctx, "failed to rollback migration %s for repository %s", migration.ID, migration.repository)
-				return err
+				return fmt.Errorf("failed to rollback migration %s for repository %s: %w", migration.ID, migration.repository, err)
 			}
 
 			if _, err := db.ExecContext(ctx, "DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2", migration.repository, migration.ID); err != nil {
-				return err
+				return fmt.Errorf("failed to delete migration record: %w", err)
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mishankov/platforma/application"
@@ -43,7 +44,7 @@ func (s *Scheduler) Run(ctx context.Context) error {
 
 			log.InfoContext(runCtx, "scheduler task finished")
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("scheduler context canceled: %w", ctx.Err())
 		}
 	}
 }

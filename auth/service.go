@@ -52,7 +52,11 @@ func NewService(repo repository, authStorage authStorage, sessionCookieName stri
 }
 
 func (s *Service) Get(ctx context.Context, id string) (*User, error) {
-	return s.repo.Get(ctx, id)
+	user, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	return user, nil
 }
 
 func (s *Service) GetFromSession(ctx context.Context, sessionId string) (*User, error) {
@@ -62,7 +66,7 @@ func (s *Service) GetFromSession(ctx context.Context, sessionId string) (*User, 
 	}
 
 	if userId == "" {
-		return nil, nil
+		return nil, ErrUserNotFound
 	}
 
 	return s.Get(ctx, userId)
@@ -83,7 +87,7 @@ func (s *Service) CreateWithLoginAndPassword(ctx context.Context, username, pass
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password+":"+salt), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
 	user := &User{
@@ -96,7 +100,11 @@ func (s *Service) CreateWithLoginAndPassword(ctx context.Context, username, pass
 		Status:   StatusActive,
 	}
 
-	return s.repo.Create(ctx, user)
+	err = s.repo.Create(ctx, user)
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	return nil
 }
 
 func (s *Service) CreateSessionFromUsernameAndPassword(ctx context.Context, username, password string) (string, error) {
@@ -115,11 +123,18 @@ func (s *Service) CreateSessionFromUsernameAndPassword(ctx context.Context, user
 		return "", fmt.Errorf("failed to get session: %w", err)
 	}
 
-	return session, err
+	if err != nil {
+		return "", fmt.Errorf("failed to create session: %w", err)
+	}
+	return session, nil
 }
 
 func (s *Service) DeleteSession(ctx context.Context, sessionId string) error {
-	return s.authStorage.DeleteSession(ctx, sessionId)
+	err := s.authStorage.DeleteSession(ctx, sessionId)
+	if err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+	return nil
 }
 
 func (s *Service) CookieName() string {
@@ -129,7 +144,7 @@ func (s *Service) CookieName() string {
 func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPassword string) error {
 	user := UserFromContext(ctx)
 	if user == nil {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 
 	if s.passwordValidator != nil {
@@ -149,19 +164,23 @@ func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPasswo
 	newSalt := uuid.New().String()
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+":"+newSalt), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
-	return s.repo.UpdatePassword(ctx, user.ID, string(hashedPassword), newSalt)
+	err = s.repo.UpdatePassword(ctx, user.ID, string(hashedPassword), newSalt)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
 }
 
 func defaultPasswordValidator(password string) error {
 	if len(password) < 8 {
-		return errors.New("short password")
+		return ErrShortPassword
 	}
 
 	if len(password) > 100 {
-		return errors.New("long password")
+		return ErrLongPassword
 	}
 
 	return nil
@@ -169,11 +188,11 @@ func defaultPasswordValidator(password string) error {
 
 func defaultUsernameValidator(username string) error {
 	if len(username) < 5 {
-		return errors.New("short username")
+		return ErrShortUsername
 	}
 
 	if len(username) > 20 {
-		return errors.New("long username")
+		return ErrLongUsername
 	}
 
 	return nil

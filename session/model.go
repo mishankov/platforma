@@ -3,10 +3,10 @@ package session
 import "time"
 
 type Session struct {
-	ID      string    `json:"id" db:"id"`
-	User    string    `json:"user" db:"user"`
-	Created time.Time `json:"created" db:"created"`
-	Expires time.Time `json:"expires" db:"expires"`
+	ID      string    `db:"id"      json:"id"`
+	User    string    `db:"user"    json:"user"`
+	Created time.Time `db:"created" json:"created"`
+	Expires time.Time `db:"expires" json:"expires"`
 }
 
 func (s *Session) IsExpired() bool {

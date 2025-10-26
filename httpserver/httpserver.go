@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -47,8 +48,9 @@ func (s *HttpServer) UseFunc(middlewareFuncs ...func(http.Handler) http.Handler)
 
 func (s *HttpServer) Run(ctx context.Context) error {
 	server := &http.Server{
-		Addr:    ":" + s.port,
-		Handler: wrapHandlerInMiddleware(s.mux, s.middlewares),
+		Addr:              ":" + s.port,
+		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
+		ReadHeaderTimeout: 1 * time.Second,
 	}
 
 	go func() {
@@ -69,7 +71,7 @@ func (s *HttpServer) Run(ctx context.Context) error {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.ErrorContext(ctx, "HTTP shutdown error", "error", err)
-		return err
+		return fmt.Errorf("failed to shutdown server: %w", err)
 	}
 	log.InfoContext(ctx, "graceful shutdown completed.")
 
