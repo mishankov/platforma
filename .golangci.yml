@@ -37,6 +37,15 @@ linters:
     - prealloc
     - staticcheck
     - tagalign
+    - tagliatelle
+    - testableexamples
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
 
   settings:
     iface:
@@ -45,6 +54,10 @@ linters:
         - unused # Identifies interfaces that are not used anywhere in the same package where the interface is defined.
         - opaque # Identifies functions that return interfaces, but the actual returned value is always a single concrete implementation.
 
+    tagliatelle:
+      case:
+        rules:
+          json: camel
   exclusions:
     rules:
       - path: _test\.go

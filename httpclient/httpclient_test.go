@@ -31,7 +31,7 @@ func TestDo_Success(t *testing.T) {
 	defer server.Close()
 
 	client := httpclient.New(timeout)
-	req, err := http.NewRequestWithContext(context.Background(), "GET", server.URL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL, nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestDo_Error(t *testing.T) {
 
 	// Create a request to a non-existent server
 	client := httpclient.New(timeout)
-	req, err := http.NewRequestWithContext(context.Background(), "GET", "http://localhost:9999/nonexistent", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost:9999/nonexistent", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
