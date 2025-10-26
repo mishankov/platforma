@@ -18,6 +18,8 @@ func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestHttpServer_ShutdownCompletesBeforeTimeout(t *testing.T) {
+	t.Parallel()
+
 	// Create a test HTTP server directly to test shutdown behavior
 	server := &http.Server{
 		Addr:    ":8080",
@@ -53,6 +55,8 @@ func TestHttpServer_ShutdownCompletesBeforeTimeout(t *testing.T) {
 }
 
 func TestHttpServer_ShutdownWithNoActiveConnections(t *testing.T) {
+	t.Parallel()
+
 	// Create HttpServer instance to test the integration
 	httpServer := httpserver.New("8081", 3*time.Second)
 	httpServer.Handle("/test", &testHandler{})
@@ -90,6 +94,8 @@ func TestHttpServer_ShutdownWithNoActiveConnections(t *testing.T) {
 }
 
 func TestHttpServer_Healthcheck(t *testing.T) {
+	t.Parallel()
+
 	server := httpserver.New("8083", 5*time.Second)
 
 	result := server.Healthcheck(context.Background())

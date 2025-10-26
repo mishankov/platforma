@@ -13,6 +13,8 @@ import (
 const timeout = 10 * time.Second
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	client := httpclient.New(timeout)
 	if client == nil {
 		t.Error("New() should return a non-nil client")
@@ -20,6 +22,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestDo_Success(t *testing.T) {
+	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("test response"))
@@ -48,6 +52,8 @@ func TestDo_Success(t *testing.T) {
 }
 
 func TestDo_Error(t *testing.T) {
+	t.Parallel()
+
 	// Create a request to a non-existent server
 	client := httpclient.New(timeout)
 	req, err := http.NewRequestWithContext(context.Background(), "GET", "http://localhost:9999/nonexistent", nil)
@@ -55,13 +61,8 @@ func TestDo_Error(t *testing.T) {
 		t.Fatalf("failed to create request: %v", err)
 	}
 
-	resp, err := client.Do(req)
+	_, err = client.Do(req)
 	if err == nil {
 		t.Error("expected error for non-existent server, got nil")
 	}
-	defer func() {
-		if resp.Body != nil {
-			resp.Body.Close()
-		}
-	}()
 }

@@ -11,6 +11,8 @@ import (
 )
 
 func TestAuthenticationMiddleware_ValidSession(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users: map[string]*auth.User{
 			"valid-session-id": {ID: "user-id", Username: "testuser"},
@@ -35,6 +37,8 @@ func TestAuthenticationMiddleware_ValidSession(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_NoSessionCookie(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		cookieName: "session",
 	}
@@ -55,6 +59,8 @@ func TestAuthenticationMiddleware_NoSessionCookie(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_InvalidSession(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users:      map[string]*auth.User{},
 		cookieName: "session",
@@ -77,6 +83,8 @@ func TestAuthenticationMiddleware_InvalidSession(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_UserServiceError(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		error:      errors.New("database error"),
 		cookieName: "session",
@@ -99,6 +107,8 @@ func TestAuthenticationMiddleware_UserServiceError(t *testing.T) {
 }
 
 func TestAuthenticationMiddleware_UserNotFound(t *testing.T) {
+	t.Parallel()
+
 	userSvc := &mockUserService{
 		users:      map[string]*auth.User{},
 		cookieName: "session",
