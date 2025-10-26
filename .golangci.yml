@@ -32,6 +32,7 @@ linters:
     - nilnil
     - noctx
     - paralleltest
+    - perfsprint
 
   settings:
     iface:
