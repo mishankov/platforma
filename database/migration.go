@@ -5,8 +5,7 @@ import (
 	"time"
 )
 
-// TODO: rename to migration
-type migrations struct {
+type migrationLog struct {
 	Repository  string         `db:"repository"`
 	MigrationId sql.NullString `db:"id"`
 	Timestamp   time.Time      `db:"timestamp"`

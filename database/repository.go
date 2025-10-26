@@ -20,8 +20,8 @@ func (r *repository) Schema() ([]Migration, Schema) {
 	}}
 }
 
-func (r *repository) GetMigrations(ctx context.Context) ([]*migrations, error) {
-	var migrations []*migrations
+func (r *repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, error) {
+	var migrations []migrationLog
 	err := r.db.SelectContext(ctx, &migrations, "SELECT * FROM platforma_migrations")
 	if err != nil {
 		return nil, err
@@ -30,11 +30,17 @@ func (r *repository) GetMigrations(ctx context.Context) ([]*migrations, error) {
 	return migrations, nil
 }
 
-func (r *repository) SaveMigration(ctx context.Context, migration migrations) error {
+func (r *repository) SaveMigrationLog(ctx context.Context, log migrationLog) error {
 	query := `
 		INSERT INTO platforma_migrations (repository, id, timestamp)
 		VALUES (:repository, :id, :timestamp)
 	`
-	_, err := r.db.NamedExecContext(ctx, query, migration)
+	_, err := r.db.NamedExecContext(ctx, query, log)
+	return err
+}
+
+func (r *repository) RemoveMigrationLog(ctx context.Context, repository, id string) error {
+	query := `DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2`
+	_, err := r.db.ExecContext(ctx, query, repository, id)
 	return err
 }

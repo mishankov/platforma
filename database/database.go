@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"slices"
 	"time"
@@ -16,6 +17,8 @@ type Database struct {
 	*sqlx.DB
 	repositories map[string]any
 	migrators    map[string]schemer
+	repository   *repository
+	service      *service
 }
 
 func New(connection string) (*Database, error) {
@@ -23,7 +26,10 @@ func New(connection string) (*Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]schemer)}, nil
+
+	repository := newRepository(db)
+	service := newService(repository, db)
+	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]schemer), repository: repository, service: service}, nil
 }
 
 func (db *Database) RegisterRepository(name string, repository any) {
@@ -35,13 +41,15 @@ func (db *Database) RegisterRepository(name string, repository any) {
 }
 
 func (db *Database) Migrate(ctx context.Context) error {
-	if _, err := db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)"); err != nil {
+	// Ensure that migration table exists
+	_, databaseRepoSchema := db.repository.Schema()
+	err := db.service.ApplySchema(ctx, databaseRepoSchema)
+	if err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
-	// Select data from platforma_migrations table
-	var migrationsState []migrations
-	err := db.SelectContext(ctx, &migrationsState, "SELECT * FROM platforma_migrations")
+	// Get completed migrations
+	migrationsState, err := db.service.GetMigrationLogs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to select migrations state: %w", err)
 	}
@@ -52,28 +60,28 @@ func (db *Database) Migrate(ctx context.Context) error {
 	for repoName, migr := range db.migrators {
 		repoMigrations, repoSchema := migr.Schema()
 
-		repoHasMigrations := slices.ContainsFunc(migrationsState, func(m migrations) bool {
+		repoHasMigrations := slices.ContainsFunc(migrationsState, func(m migrationLog) bool {
 			return m.Repository == repoName
 		})
 
 		// If repo does not has migrations apply schema and exit
 		if !repoHasMigrations {
-			for _, query := range repoSchema.Queries {
-				if _, err := db.ExecContext(ctx, query); err != nil {
-					migrationErr = fmt.Errorf("failed to execute schema query: %w", err)
-					break
-				}
-				log.InfoContext(ctx, "schema applied", "repository", repoName)
+			err := db.service.ApplySchema(ctx, repoSchema)
+			if err != nil {
+				return fmt.Errorf("failed to execute schema query: %w", err)
 			}
+			log.InfoContext(ctx, "schema applied", "repository", repoName)
 
 			// Log that schema applied
-			if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, timestamp) VALUES ($1, $2)", repoName, time.Now()); err != nil {
+			err = db.service.SaveMigrationLog(ctx, migrationLog{Repository: repoName, Timestamp: time.Now()})
+			if err != nil {
 				return fmt.Errorf("failed to insert migration record: %w", err)
 			}
 
 			// If schema is applied, log that all migrations are also applied
 			for _, migration := range repoMigrations {
-				if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, id, timestamp) VALUES ($1, $2, $3)", repoName, migration.ID, time.Now()); err != nil {
+				err := db.service.SaveMigrationLog(ctx, migrationLog{Repository: repoName, MigrationId: sql.NullString{String: migration.ID}, Timestamp: time.Now()})
+				if err != nil {
 					return fmt.Errorf("failed to insert migration record: %w", err)
 				}
 			}
@@ -85,26 +93,31 @@ func (db *Database) Migrate(ctx context.Context) error {
 			migration.repository = repoName
 
 			// Check if migration has been applied
-			migrationHasApplied := slices.ContainsFunc(migrationsState, func(m migrations) bool {
+			migrationHasApplied := slices.ContainsFunc(migrationsState, func(m migrationLog) bool {
 				return m.Repository == repoName && m.MigrationId.String == migration.ID
 			})
 
+			// Skip to next migration if current is applied
 			if migrationHasApplied {
 				continue
 			}
 
-			if _, err := db.ExecContext(ctx, migration.Up); err != nil {
+			// Try to apply mifration
+			err := db.service.ApplyMigration(ctx, migration)
+			if err != nil {
 				migrationErr = fmt.Errorf("failed to apply migration %s for repository %s: %w", migration.ID, repoName, err)
-				log.ErrorContext(ctx, "failed to apply migration for repository", "migration", migration.ID, "repository", repoName)
 				break
 			}
 
+			// If migration applied successfuly add it to applied migrations list
 			appliedMigrations = append(appliedMigrations, migration)
 			log.InfoContext(ctx, "applied migration for repository", "migration", migration.ID, "repository", repoName)
 
 			// Log that migration applied
-			if _, err := db.ExecContext(ctx, "INSERT INTO platforma_migrations (repository, id, timestamp) VALUES ($1, $2, $3)", repoName, migration.ID, time.Now()); err != nil {
-				return fmt.Errorf("failed to insert migration record: %w", err)
+			err = db.service.SaveMigrationLog(ctx, migrationLog{Repository: repoName, MigrationId: sql.NullString{String: migration.ID}, Timestamp: time.Now()})
+			if err != nil {
+				migrationErr = fmt.Errorf("failed to insert migration record: %w", err)
+				break
 			}
 		}
 
@@ -115,12 +128,13 @@ func (db *Database) Migrate(ctx context.Context) error {
 
 	if migrationErr != nil {
 		for _, migration := range slices.Backward(appliedMigrations) {
-			if _, err := db.ExecContext(ctx, migration.Down); err != nil {
-				log.ErrorContext(ctx, "failed to rollback migration %s for repository %s", migration.ID, migration.repository)
+			err := db.service.RevertMigration(ctx, migration)
+			if err != nil {
 				return fmt.Errorf("failed to rollback migration %s for repository %s: %w", migration.ID, migration.repository, err)
 			}
 
-			if _, err := db.ExecContext(ctx, "DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2", migration.repository, migration.ID); err != nil {
+			err = db.service.RemoveMigrationLog(ctx, migration.repository, migration.ID)
+			if err != nil {
 				return fmt.Errorf("failed to delete migration record: %w", err)
 			}
 		}
