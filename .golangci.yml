@@ -69,3 +69,7 @@ linters:
         - errcheck
         - gosec
         - nilnil
+
+formatters:
+  enable:
+    - gofmt
