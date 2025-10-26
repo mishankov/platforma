@@ -11,11 +11,11 @@ const (
 )
 
 type User struct {
-	ID       string    `json:"id" db:"id"`
-	Username string    `json:"username" db:"username"`
-	Password string    `json:"password" db:"password"`
-	Salt     string    `json:"salt" db:"salt"`
-	Created  time.Time `json:"created" db:"created"`
-	Updated  time.Time `json:"updated" db:"updated"`
-	Status   Status    `json:"status" db:"status"`
+	ID       string    `db:"id"       json:"id"`
+	Username string    `db:"username" json:"username"`
+	Password string    `db:"password" json:"password"`
+	Salt     string    `db:"salt"     json:"salt"`
+	Created  time.Time `db:"created"  json:"created"`
+	Updated  time.Time `db:"updated"  json:"updated"`
+	Status   Status    `db:"status"   json:"status"`
 }

@@ -1,7 +1,8 @@
 version: "2"
 
 linters:
-  # condider to add: cyclop
+  # consider to add: cyclop
+  #  find sane settings for revive
   default: none
   enable:
     - bodyclose
@@ -34,6 +35,8 @@ linters:
     - paralleltest
     - perfsprint
     - prealloc
+    - staticcheck
+    - tagalign
 
   settings:
     iface:
