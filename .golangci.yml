@@ -33,6 +33,7 @@ linters:
     - noctx
     - paralleltest
     - perfsprint
+    - prealloc
 
   settings:
     iface:
