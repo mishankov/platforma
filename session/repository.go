@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/mishankov/platforma/database"
 )
@@ -43,7 +44,7 @@ func (r *Repository) Get(ctx context.Context, id string) (*Session, error) {
 	var session Session
 	err := r.db.GetContext(ctx, &session, "SELECT * FROM sessions WHERE id = $1", id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session by id: %w", err)
 	}
 	return &session, nil
 }
@@ -52,7 +53,7 @@ func (r *Repository) GetByUserId(ctx context.Context, userID string) (*Session, 
 	var session Session
 	err := r.db.GetContext(ctx, &session, "SELECT * FROM sessions WHERE \"user\" = $1", userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session by user id: %w", err)
 	}
 	return &session, nil
 }
@@ -63,7 +64,10 @@ func (r *Repository) Create(ctx context.Context, session *Session) error {
 		VALUES (:id, :user, :created, :expires)
 	`
 	_, err := r.db.NamedExecContext(ctx, query, session)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) Delete(ctx context.Context, id string) error {
@@ -71,6 +75,8 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 		DELETE FROM sessions WHERE id = $1
 	`
 	_, err := r.db.ExecContext(ctx, query, id)
-
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+	return nil
 }

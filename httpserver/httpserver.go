@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -70,7 +71,7 @@ func (s *HttpServer) Run(ctx context.Context) error {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.ErrorContext(ctx, "HTTP shutdown error", "error", err)
-		return err
+		return fmt.Errorf("failed to shutdown server: %w", err)
 	}
 	log.InfoContext(ctx, "graceful shutdown completed.")
 

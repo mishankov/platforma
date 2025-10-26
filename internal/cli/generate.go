@@ -59,7 +59,7 @@ func generateCommand(args []string) {
 func writeFromTemplate(folder, file, templatePath string, data any) error {
 	err := os.MkdirAll(folder, 0750)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create directory %s: %w", folder, err)
 	}
 
 	// Get the directory of the current CLI package
@@ -85,7 +85,7 @@ func writeFromTemplate(folder, file, templatePath string, data any) error {
 
 	err = os.WriteFile(filepath.Join(folder, file), buf.Bytes(), 0600)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write file %s: %w", filepath.Join(folder, file), err)
 	}
 
 	return nil

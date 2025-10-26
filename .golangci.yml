@@ -46,6 +46,9 @@ linters:
     - unparam
     - unused
     - usestdlibvars
+    - usetesting
+    - wastedassign
+    - wrapcheck
 
   settings:
     iface:

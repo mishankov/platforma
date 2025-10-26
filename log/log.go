@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 )
@@ -62,7 +63,11 @@ func (h *contextHandler) Handle(ctx context.Context, r slog.Record) error {
 		}
 	}
 
-	return h.Handler.Handle(ctx, r)
+	err := h.Handler.Handle(ctx, r)
+	if err != nil {
+		return fmt.Errorf("failed to handle log record: %w", err)
+	}
+	return nil
 }
 
 // New creates a new slog.Logger with the specified type (json/text), log level, and additional context keys to include.

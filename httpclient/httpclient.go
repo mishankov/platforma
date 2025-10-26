@@ -1,6 +1,7 @@
 package httpclient
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -25,11 +26,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		log.DebugContext(req.Context(), "request failed", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	log.DebugContext(req.Context(), "request made", "status", resp.Status, "headers", maskedHeaders(resp.Header))
 
-	return resp, err
+	return resp, nil
 }
 
 func maskedHeaders(headers http.Header) http.Header {
