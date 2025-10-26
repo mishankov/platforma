@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -24,7 +25,7 @@ func (r *repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, erro
 	var migrations []migrationLog
 	err := r.db.SelectContext(ctx, &migrations, "SELECT * FROM platforma_migrations")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get migration logs: %w", err)
 	}
 
 	return migrations, nil
@@ -36,11 +37,17 @@ func (r *repository) SaveMigrationLog(ctx context.Context, log migrationLog) err
 		VALUES (:repository, :id, :timestamp)
 	`
 	_, err := r.db.NamedExecContext(ctx, query, log)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to save migration log: %w", err)
+	}
+	return nil
 }
 
 func (r *repository) RemoveMigrationLog(ctx context.Context, repository, id string) error {
 	query := `DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2`
 	_, err := r.db.ExecContext(ctx, query, repository, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to remove migration log: %w", err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -29,19 +30,25 @@ func (s *service) RemoveMigrationLog(ctx context.Context, repository, id string)
 
 func (s *service) ApplyMigration(ctx context.Context, migration Migration) error {
 	_, err := s.db.ExecContext(ctx, migration.Up)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to apply migration: %w", err)
+	}
+	return nil
 }
 
 func (s *service) RevertMigration(ctx context.Context, migration Migration) error {
 	_, err := s.db.ExecContext(ctx, migration.Down)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to revert migration: %w", err)
+	}
+	return nil
 }
 
 func (s *service) ApplySchema(ctx context.Context, schema Schema) error {
 	for _, query := range schema.Queries {
 		_, err := s.db.ExecContext(ctx, query)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to apply schema query: %w", err)
 		}
 	}
 
