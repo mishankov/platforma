@@ -130,10 +130,11 @@ func (m *mockUserService) GetFromSession(ctx context.Context, sessionId string) 
 	if m.error != nil {
 		return nil, m.error
 	}
+
 	if user, ok := m.users[sessionId]; ok {
 		return user, nil
 	}
-	return nil, nil
+	return nil, auth.ErrUserNotFound
 }
 
 func (m *mockUserService) CookieName() string {
