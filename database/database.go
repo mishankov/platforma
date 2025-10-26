@@ -15,7 +15,7 @@ import (
 type Database struct {
 	*sqlx.DB
 	repositories map[string]any
-	migrators    map[string]shemer
+	migrators    map[string]schemer
 }
 
 func New(connection string) (*Database, error) {
@@ -23,13 +23,13 @@ func New(connection string) (*Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]shemer)}, nil
+	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]schemer)}, nil
 }
 
 func (db *Database) RegisterRepository(name string, repository any) {
 	db.repositories[name] = repository
 
-	if migr, ok := repository.(shemer); ok {
+	if migr, ok := repository.(schemer); ok {
 		db.migrators[name] = migr
 	}
 }

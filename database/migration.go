@@ -22,6 +22,6 @@ type Schema struct {
 	Queries []string
 }
 
-type shemer interface {
+type schemer interface {
 	Schema() ([]Migration, Schema)
 }
