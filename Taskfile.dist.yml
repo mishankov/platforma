@@ -8,3 +8,7 @@ tasks:
   fix:
     cmds:
       - golangci-lint run --fix
+
+  test:
+    cmds:
+      - go test -cover ./...
