@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -11,36 +12,40 @@ import (
 )
 
 type repository interface {
-	GetMigrationLogs(ctx context.Context) ([]migrationLog, error)
-	SaveMigrationLog(ctx context.Context, log migrationLog) error
+	GetMigrationLogs(ctx context.Context) ([]MigrationLog, error)
+	SaveMigrationLog(ctx context.Context, log MigrationLog) error
 	RemoveMigrationLog(ctx context.Context, repository, id string) error
+	ExecuteQuery(ctx context.Context, query string) error
 	Migrations() []Migration
 }
 
 type service struct {
 	repo repository
-	db   *sqlx.DB
 }
 
-func newService(repo repository, db *sqlx.DB) *service {
-	return &service{repo: repo, db: db}
+func NewService(repo repository, db *sqlx.DB) *service {
+	return &service{repo: repo}
 }
 
-func (s *service) GetMigrationLogs(ctx context.Context) ([]migrationLog, error) {
+func (s *service) GetMigrationLogs(ctx context.Context) ([]MigrationLog, error) {
 	return s.repo.GetMigrationLogs(ctx)
 }
 
 func (s *service) SaveMigrationLog(ctx context.Context, repository, migrationId string) error {
-	return s.repo.SaveMigrationLog(ctx, migrationLog{Repository: repository, MigrationId: migrationId, Timestamp: time.Now()})
+	return s.repo.SaveMigrationLog(ctx, MigrationLog{Repository: repository, MigrationId: migrationId, Timestamp: time.Now()})
 }
 
-func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration) {
+func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration) error {
+	masterErr := error(nil)
 	for _, migr := range migrations {
 		err := s.SaveMigrationLog(ctx, migr.repository, migr.ID)
 		if err != nil {
+			errors.Join(masterErr, err)
 			log.ErrorContext(ctx, "failed to save migration log", "error", err.Error())
 		}
 	}
+
+	return masterErr
 }
 
 func (s *service) RemoveMigrationLog(ctx context.Context, repository, id string) error {
@@ -66,7 +71,7 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 	}
 
 	for _, migr := range migrations {
-		if !slices.ContainsFunc(migrationLogs, func(l migrationLog) bool {
+		if !slices.ContainsFunc(migrationLogs, func(l MigrationLog) bool {
 			return l.Repository == "platforma_migrations" && l.MigrationId == migr.ID
 		}) {
 			err := s.ApplyMigration(ctx, migr)
@@ -84,17 +89,17 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 }
 
 func (s *service) ApplyMigration(ctx context.Context, migration Migration) error {
-	_, err := s.db.ExecContext(ctx, migration.Up)
+	err := s.repo.ExecuteQuery(ctx, migration.Up)
 	if err != nil {
 		return fmt.Errorf("failed to apply migration: %w", err)
 	}
 	return nil
 }
 
-func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, migrationLogs []migrationLog) error {
+func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, migrationLogs []MigrationLog) error {
 	appliedMigrations := []Migration{}
 	for _, migr := range migrations {
-		if !slices.ContainsFunc(migrationLogs, func(l migrationLog) bool {
+		if !slices.ContainsFunc(migrationLogs, func(l MigrationLog) bool {
 			return l.Repository == migr.repository && l.MigrationId == migr.ID
 		}) {
 			err := s.ApplyMigration(ctx, migr)
@@ -111,7 +116,7 @@ func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, m
 }
 
 func (s *service) RevertMigration(ctx context.Context, migration Migration) error {
-	_, err := s.db.ExecContext(ctx, migration.Down)
+	err := s.repo.ExecuteQuery(ctx, migration.Down)
 	if err != nil {
 		return fmt.Errorf("failed to revert migration: %w", err)
 	}

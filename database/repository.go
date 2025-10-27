@@ -23,8 +23,8 @@ func (r *Repository) Migrations() []Migration {
 	}}
 }
 
-func (r *Repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, error) {
-	var migrations []migrationLog
+func (r *Repository) GetMigrationLogs(ctx context.Context) ([]MigrationLog, error) {
+	var migrations []MigrationLog
 	err := r.db.SelectContext(ctx, &migrations, "SELECT * FROM platforma_migrations")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration logs: %w", err)
@@ -33,7 +33,7 @@ func (r *Repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, erro
 	return migrations, nil
 }
 
-func (r *Repository) SaveMigrationLog(ctx context.Context, log migrationLog) error {
+func (r *Repository) SaveMigrationLog(ctx context.Context, log MigrationLog) error {
 	query := `
 		INSERT INTO platforma_migrations (repository, id, timestamp)
 		VALUES (:repository, :id, :timestamp)
@@ -52,4 +52,9 @@ func (r *Repository) RemoveMigrationLog(ctx context.Context, repository, id stri
 		return fmt.Errorf("failed to remove migration log: %w", err)
 	}
 	return nil
+}
+
+func (r *Repository) ExecuteQuery(ctx context.Context, query string) error {
+	_, err := r.db.ExecContext(ctx, query)
+	return err
 }

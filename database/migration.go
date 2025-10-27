@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type migrationLog struct {
+type MigrationLog struct {
 	Repository  string    `db:"repository"`
 	MigrationId string    `db:"id"`
 	Timestamp   time.Time `db:"timestamp"`
