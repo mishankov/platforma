@@ -72,11 +72,68 @@ func TestSaveMigrationLogs(t *testing.T) {
 	})
 }
 
+func TestGetMigrationLogs(t *testing.T) {
+	t.Parallel()
+	t.Run("successful no logs", func(t *testing.T) {
+		t.Parallel()
+		repo := &repoMock{}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		logs, err := service.GetMigrationLogs(context.TODO())
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(logs) > 0 {
+			t.Fatalf("expected no logs, got: %d", len(logs))
+		}
+	})
+
+	t.Run("successful some logs", func(t *testing.T) {
+		t.Parallel()
+		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
+			return []database.MigrationLog{{}, {}}, nil
+		}}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		logs, err := service.GetMigrationLogs(context.TODO())
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(logs) != 2 {
+			t.Fatalf("expected 2 logs, got: %d", len(logs))
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		t.Parallel()
+		ErrSome := errors.New("some error")
+		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
+			return nil, ErrSome
+		}}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		_, err := service.GetMigrationLogs(context.TODO())
+		if err == nil {
+			t.Fatalf("expected error, got nothing")
+		}
+
+		if !errors.Is(err, ErrSome) {
+			t.Fatalf("expected ErrSome, got: %s", err.Error())
+		}
+	})
+}
+
 type repoMock struct {
+	getMigrationLogs func(context.Context) ([]database.MigrationLog, error)
 	saveMigrationLog func(context.Context, database.MigrationLog) error
 }
 
 func (r *repoMock) GetMigrationLogs(ctx context.Context) ([]database.MigrationLog, error) {
+	if r.getMigrationLogs != nil {
+		return r.getMigrationLogs(ctx)
+	}
 	return nil, nil
 }
 
