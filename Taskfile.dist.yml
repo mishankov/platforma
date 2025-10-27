@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 tasks:
   lint:
@@ -12,3 +12,8 @@ tasks:
   test:
     cmds:
       - go test -cover ./...
+
+  check:
+    deps:
+      - lint
+      - test
