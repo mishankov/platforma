@@ -28,11 +28,19 @@ func NewService(repo repository, db *sqlx.DB) *service {
 }
 
 func (s *service) GetMigrationLogs(ctx context.Context) ([]MigrationLog, error) {
-	return s.repo.GetMigrationLogs(ctx)
+	logs, err := s.repo.GetMigrationLogs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get migration logs: %w", err)
+	}
+	return logs, nil
 }
 
 func (s *service) SaveMigrationLog(ctx context.Context, repository, migrationId string) error {
-	return s.repo.SaveMigrationLog(ctx, MigrationLog{Repository: repository, MigrationId: migrationId, Timestamp: time.Now()})
+	err := s.repo.SaveMigrationLog(ctx, MigrationLog{Repository: repository, MigrationId: migrationId, Timestamp: time.Now()})
+	if err != nil {
+		return fmt.Errorf("failed to save migration log: %w", err)
+	}
+	return nil
 }
 
 func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration) error {
@@ -41,7 +49,6 @@ func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration)
 		err := s.SaveMigrationLog(ctx, migr.repository, migr.ID)
 		if err != nil {
 			masterErr = errors.Join(masterErr, err)
-			log.ErrorContext(ctx, "failed to save migration log", "error", err.Error())
 		}
 	}
 
@@ -49,7 +56,11 @@ func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration)
 }
 
 func (s *service) RemoveMigrationLog(ctx context.Context, repository, id string) error {
-	return s.repo.RemoveMigrationLog(ctx, repository, id)
+	err := s.repo.RemoveMigrationLog(ctx, repository, id)
+	if err != nil {
+		return fmt.Errorf("failed to remove migration log: %w", err)
+	}
+	return nil
 }
 
 func (s *service) MigrateSelf(ctx context.Context) error {
@@ -83,7 +94,10 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 		}
 	}
 
-	s.SaveMigrationLogs(ctx, appliedMigrations)
+	err = s.SaveMigrationLogs(ctx, appliedMigrations)
+	if err != nil {
+		log.ErrorContext(ctx, "got error(s) trying to save migration logs", "error", err.Error())
+	}
 
 	return nil
 }
@@ -110,7 +124,10 @@ func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, m
 		}
 	}
 
-	s.SaveMigrationLogs(ctx, appliedMigrations)
+	err := s.SaveMigrationLogs(ctx, appliedMigrations)
+	if err != nil {
+		log.ErrorContext(ctx, "got error(s) trying to save migration logs", "error", err.Error())
+	}
 
 	return nil
 }

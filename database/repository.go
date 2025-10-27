@@ -56,5 +56,8 @@ func (r *Repository) RemoveMigrationLog(ctx context.Context, repository, id stri
 
 func (r *Repository) ExecuteQuery(ctx context.Context, query string) error {
 	_, err := r.db.ExecContext(ctx, query)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+	return nil
 }
