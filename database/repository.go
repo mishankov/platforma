@@ -15,9 +15,11 @@ func newRepository(db *sqlx.DB) *repository {
 	return &repository{db: db}
 }
 
-func (r *repository) Schema() ([]Migration, Schema) {
-	return []Migration{}, Schema{Queries: []string{
-		"CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)",
+func (r *repository) Migrations() []Migration {
+	return []Migration{{
+		ID:   "init",
+		Up:   "CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)",
+		Down: "DROP TABLE platforma_migrations",
 	}}
 }
 

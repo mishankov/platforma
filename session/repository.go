@@ -25,19 +25,17 @@ func NewRepository(db db) *Repository {
 	}
 }
 
-func (r *Repository) Schema() ([]database.Migration, database.Schema) {
-	return []database.Migration{}, database.Schema{
-		Queries: []string{
-			`
-		CREATE TABLE IF NOT EXISTS sessions (
+func (r *Repository) Schema() []database.Migration {
+	return []database.Migration{{
+		ID: "init",
+		Up: `CREATE TABLE IF NOT EXISTS sessions (
 			id VARCHAR(255) PRIMARY KEY,
 			"user" VARCHAR(255),
 			created TIMESTAMP,
 			expires TIMESTAMP
-		)
-		`,
-		},
-	}
+		)`,
+		Down: "DROP TABLE sessions",
+	}}
 }
 
 func (r *Repository) Get(ctx context.Context, id string) (*Session, error) {

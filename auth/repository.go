@@ -25,22 +25,21 @@ func NewRepository(db db) *Repository {
 	}
 }
 
-func (r *Repository) Schema() ([]database.Migration, database.Schema) {
-	return []database.Migration{}, database.Schema{
-		Queries: []string{
-			`
-				CREATE TABLE IF NOT EXISTS users (
-					id VARCHAR(255) PRIMARY KEY,
-					username VARCHAR(255) UNIQUE,
-					password TEXT,
-					salt TEXT,
-					created TIMESTAMP,
-					updated TIMESTAMP,
-					status VARCHAR(50)
-				)
-			`,
-		},
-	}
+func (r *Repository) Schema() []database.Migration {
+	return []database.Migration{{
+		ID: "init",
+		Up: `CREATE TABLE IF NOT EXISTS users (
+			id VARCHAR(255) PRIMARY KEY,
+			username VARCHAR(255) UNIQUE,
+			password TEXT,
+			salt TEXT,
+			created TIMESTAMP,
+			updated TIMESTAMP,
+			status VARCHAR(50)
+		)`,
+		Down: "DROP TABLE users",
+	}}
+
 }
 
 func (r *Repository) Get(ctx context.Context, id string) (*User, error) {

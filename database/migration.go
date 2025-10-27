@@ -18,10 +18,6 @@ type Migration struct {
 	repository string
 }
 
-type Schema struct {
-	Queries []string
-}
-
-type schemer interface {
-	Schema() ([]Migration, Schema)
+type migrator interface {
+	Migrations() []Migration
 }
