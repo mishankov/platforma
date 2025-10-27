@@ -40,7 +40,7 @@ func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration)
 	for _, migr := range migrations {
 		err := s.SaveMigrationLog(ctx, migr.repository, migr.ID)
 		if err != nil {
-			errors.Join(masterErr, err)
+			masterErr = errors.Join(masterErr, err)
 			log.ErrorContext(ctx, "failed to save migration log", "error", err.Error())
 		}
 	}
