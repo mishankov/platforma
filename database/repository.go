@@ -7,15 +7,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type repository struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func newRepository(db *sqlx.DB) *repository {
-	return &repository{db: db}
+func newRepository(db *sqlx.DB) *Repository {
+	return &Repository{db: db}
 }
 
-func (r *repository) Migrations() []Migration {
+func (r *Repository) Migrations() []Migration {
 	return []Migration{{
 		ID:   "init",
 		Up:   "CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)",
@@ -23,7 +23,7 @@ func (r *repository) Migrations() []Migration {
 	}}
 }
 
-func (r *repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, error) {
+func (r *Repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, error) {
 	var migrations []migrationLog
 	err := r.db.SelectContext(ctx, &migrations, "SELECT * FROM platforma_migrations")
 	if err != nil {
@@ -33,7 +33,7 @@ func (r *repository) GetMigrationLogs(ctx context.Context) ([]migrationLog, erro
 	return migrations, nil
 }
 
-func (r *repository) SaveMigrationLog(ctx context.Context, log migrationLog) error {
+func (r *Repository) SaveMigrationLog(ctx context.Context, log migrationLog) error {
 	query := `
 		INSERT INTO platforma_migrations (repository, id, timestamp)
 		VALUES (:repository, :id, :timestamp)
@@ -45,7 +45,7 @@ func (r *repository) SaveMigrationLog(ctx context.Context, log migrationLog) err
 	return nil
 }
 
-func (r *repository) RemoveMigrationLog(ctx context.Context, repository, id string) error {
+func (r *Repository) RemoveMigrationLog(ctx context.Context, repository, id string) error {
 	query := `DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2`
 	_, err := r.db.ExecContext(ctx, query, repository, id)
 	if err != nil {

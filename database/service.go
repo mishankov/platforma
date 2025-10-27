@@ -10,12 +10,19 @@ import (
 	"github.com/mishankov/platforma/log"
 )
 
+type repository interface {
+	GetMigrationLogs(ctx context.Context) ([]migrationLog, error)
+	SaveMigrationLog(ctx context.Context, log migrationLog) error
+	RemoveMigrationLog(ctx context.Context, repository, id string) error
+	Migrations() []Migration
+}
+
 type service struct {
-	repo *repository
+	repo repository
 	db   *sqlx.DB
 }
 
-func newService(repo *repository, db *sqlx.DB) *service {
+func newService(repo repository, db *sqlx.DB) *service {
 	return &service{repo: repo, db: db}
 }
 

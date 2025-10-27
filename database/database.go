@@ -12,7 +12,7 @@ type Database struct {
 	*sqlx.DB
 	repositories map[string]any
 	migrators    map[string]migrator
-	repository   *repository
+	repository   *Repository
 	service      *service
 }
 
