@@ -23,7 +23,7 @@ func New(connection string) (*Database, error) {
 	}
 
 	repository := newRepository(db)
-	service := NewService(repository, db)
+	service := NewService(repository)
 	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), repository: repository, service: service}, nil
 }
 

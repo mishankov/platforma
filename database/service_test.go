@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/mishankov/platforma/database"
 )
 
@@ -14,7 +13,7 @@ func TestSaveMigrationLogs(t *testing.T) {
 	t.Run("single successful", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}})
 		if err != nil {
@@ -28,7 +27,7 @@ func TestSaveMigrationLogs(t *testing.T) {
 		repo := &repoMock{saveMigrationLog: func(ctx context.Context, ml database.MigrationLog) error {
 			return ErrSome
 		}}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}})
 		if err == nil {
@@ -55,7 +54,7 @@ func TestSaveMigrationLogs(t *testing.T) {
 
 			return nil
 		}}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}, {ID: "other id"}})
 		if err == nil {
@@ -77,7 +76,7 @@ func TestGetMigrationLogs(t *testing.T) {
 	t.Run("successful no logs", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		logs, err := service.GetMigrationLogs(context.TODO())
 		if err != nil {
@@ -94,7 +93,7 @@ func TestGetMigrationLogs(t *testing.T) {
 		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
 			return []database.MigrationLog{{}, {}}, nil
 		}}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		logs, err := service.GetMigrationLogs(context.TODO())
 		if err != nil {
@@ -112,7 +111,7 @@ func TestGetMigrationLogs(t *testing.T) {
 		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
 			return nil, ErrSome
 		}}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		_, err := service.GetMigrationLogs(context.TODO())
 		if err == nil {
@@ -130,7 +129,7 @@ func TestRevertMigrations(t *testing.T) {
 	t.Run("successful revert", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		migrations := []database.Migration{{ID: "migration1"}, {ID: "migration2"}}
 
@@ -148,7 +147,7 @@ func TestRevertMigrations(t *testing.T) {
 				return ErrSome
 			},
 		}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		err := service.RevertMigrations(context.TODO(), []database.Migration{{ID: "migration1"}})
 		if err == nil {
@@ -177,7 +176,7 @@ func TestRevertMigrations(t *testing.T) {
 				return nil
 			},
 		}
-		service := database.NewService(repo, &sqlx.DB{})
+		service := database.NewService(repo)
 
 		err := service.RevertMigrations(context.TODO(), []database.Migration{{Down: "migration1"}, {Down: "migration2"}})
 		if err == nil {

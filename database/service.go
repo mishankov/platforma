@@ -7,7 +7,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/mishankov/platforma/log"
 )
 
@@ -23,7 +22,7 @@ type service struct {
 	repo repository
 }
 
-func NewService(repo repository, db *sqlx.DB) *service {
+func NewService(repo repository) *service {
 	return &service{repo: repo}
 }
 
