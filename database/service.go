@@ -55,14 +55,6 @@ func (s *service) SaveMigrationLogs(ctx context.Context, migrations []Migration)
 	return masterErr
 }
 
-func (s *service) RemoveMigrationLog(ctx context.Context, repository, id string) error {
-	err := s.repo.RemoveMigrationLog(ctx, repository, id)
-	if err != nil {
-		return fmt.Errorf("failed to remove migration log: %w", err)
-	}
-	return nil
-}
-
 func (s *service) MigrateSelf(ctx context.Context) error {
 	migrations := s.repo.Migrations()
 	appliedMigrations := []Migration{}
