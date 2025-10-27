@@ -1,14 +1,13 @@
 package database
 
 import (
-	"database/sql"
 	"time"
 )
 
 type migrationLog struct {
-	Repository  string         `db:"repository"`
-	MigrationId sql.NullString `db:"id"`
-	Timestamp   time.Time      `db:"timestamp"`
+	Repository  string    `db:"repository"`
+	MigrationId string    `db:"id"`
+	Timestamp   time.Time `db:"timestamp"`
 }
 
 type Migration struct {
