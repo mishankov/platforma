@@ -66,7 +66,10 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 		for _, migr := range migrations {
 			err := s.ApplyMigration(ctx, migr)
 			if err != nil {
-				s.RevertMigrations(ctx, appliedMigrations)
+				revertErr := s.RevertMigrations(ctx, appliedMigrations)
+				if revertErr != nil {
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+				}
 				return err
 			}
 			appliedMigrations = append(appliedMigrations, migr)
@@ -79,7 +82,10 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 		}) {
 			err := s.ApplyMigration(ctx, migr)
 			if err != nil {
-				s.RevertMigrations(ctx, appliedMigrations)
+				revertErr := s.RevertMigrations(ctx, appliedMigrations)
+				if revertErr != nil {
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+				}
 				return err
 			}
 			appliedMigrations = append(appliedMigrations, migr)
@@ -110,7 +116,10 @@ func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, m
 		}) {
 			err := s.ApplyMigration(ctx, migr)
 			if err != nil {
-				s.RevertMigrations(ctx, appliedMigrations)
+				revertErr := s.RevertMigrations(ctx, appliedMigrations)
+				if revertErr != nil {
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+				}
 				return err
 			}
 		}
@@ -132,11 +141,14 @@ func (s *service) RevertMigration(ctx context.Context, migration Migration) erro
 	return nil
 }
 
-func (s *service) RevertMigrations(ctx context.Context, migrations []Migration) {
+func (s *service) RevertMigrations(ctx context.Context, migrations []Migration) error {
+	masterErr := error(nil)
 	for _, migr := range slices.Backward(migrations) {
 		err := s.RevertMigration(ctx, migr)
 		if err != nil {
-			log.ErrorContext(ctx, "failed to revert migration", "migration", migr.ID, "error", err.Error())
+			masterErr = errors.Join(masterErr, fmt.Errorf("failed to revert migration %s: %w", migr.ID, err))
 		}
 	}
+
+	return masterErr
 }

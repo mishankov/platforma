@@ -125,9 +125,79 @@ func TestGetMigrationLogs(t *testing.T) {
 	})
 }
 
+func TestRevertMigrations(t *testing.T) {
+	t.Parallel()
+	t.Run("successful revert", func(t *testing.T) {
+		t.Parallel()
+		repo := &repoMock{}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		migrations := []database.Migration{{ID: "migration1"}, {ID: "migration2"}}
+
+		err := service.RevertMigrations(context.TODO(), migrations)
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+	})
+
+	t.Run("revert with error", func(t *testing.T) {
+		t.Parallel()
+		ErrSome := errors.New("some error")
+		repo := &repoMock{
+			executeQuery: func(ctx context.Context, query string) error {
+				return ErrSome
+			},
+		}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		err := service.RevertMigrations(context.TODO(), []database.Migration{{ID: "migration1"}})
+		if err == nil {
+			t.Fatalf("expected error, got nothing")
+		}
+
+		if !errors.Is(err, ErrSome) {
+			t.Fatalf("expected ErrSome, got: %s", err.Error())
+		}
+	})
+
+	t.Run("revert with multiple errors", func(t *testing.T) {
+		t.Parallel()
+		ErrSome := errors.New("some error")
+		ErrOther := errors.New("other error")
+		repo := &repoMock{
+			executeQuery: func(ctx context.Context, query string) error {
+				if query == "migration1" {
+					return ErrSome
+				}
+
+				if query == "migration2" {
+					return ErrOther
+				}
+
+				return nil
+			},
+		}
+		service := database.NewService(repo, &sqlx.DB{})
+
+		err := service.RevertMigrations(context.TODO(), []database.Migration{{Down: "migration1"}, {Down: "migration2"}})
+		if err == nil {
+			t.Fatalf("expected error, got nothing")
+		}
+
+		if !errors.Is(err, ErrSome) {
+			t.Fatalf("expected ErrSome, got: %s", err.Error())
+		}
+
+		if !errors.Is(err, ErrOther) {
+			t.Fatalf("expected ErrOther, got: %s", err.Error())
+		}
+	})
+}
+
 type repoMock struct {
 	getMigrationLogs func(context.Context) ([]database.MigrationLog, error)
 	saveMigrationLog func(context.Context, database.MigrationLog) error
+	executeQuery     func(context.Context, string) error
 }
 
 func (r *repoMock) GetMigrationLogs(ctx context.Context) ([]database.MigrationLog, error) {
@@ -150,6 +220,9 @@ func (r *repoMock) RemoveMigrationLog(ctx context.Context, repository, id string
 }
 
 func (r *repoMock) ExecuteQuery(ctx context.Context, query string) error {
+	if r.executeQuery != nil {
+		return r.executeQuery(ctx, query)
+	}
 	return nil
 }
 
