@@ -78,6 +78,56 @@ func TestMigrate(t *testing.T) {
 		}
 	})
 
+	// This test imitates multiple application startups
+	// If application startups multiple times, migrations should only run once
+	t.Run("initialize and migrate empty database twice", func(t *testing.T) {
+		t.Cleanup(func() {
+			err = ctr.Restore(ctx)
+			if err != nil {
+				t.Fatalf("failed to restore db: %s", err.Error())
+			}
+		})
+
+		db, err := database.New(dbURL)
+		if err != nil {
+			t.Fatalf("failed to initialize database: %s", err.Error())
+		}
+
+		if db == nil {
+			t.Fatalf("database is nil")
+		}
+
+		// First migration
+		err = db.Migrate(ctx)
+		if err != nil {
+			t.Fatalf("failed to migrate database: %s", err.Error())
+		}
+
+		// Second migration
+		err = db.Migrate(ctx)
+		if err != nil {
+			t.Fatalf("failed to migrate database: %s", err.Error())
+		}
+
+		var migrationLogs []database.MigrationLog
+		err = db.SelectContext(ctx, &migrationLogs, "SELECT * FROM platforma_migrations")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(migrationLogs) != 1 {
+			t.Fatalf("expected single migration, got: %d", len(migrationLogs))
+		}
+
+		if migrationLogs[0].Repository != "platforma_migration" {
+			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
+		}
+
+		if migrationLogs[0].MigrationId != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		}
+	})
+
 	t.Run("migrate database with single repository", func(t *testing.T) {
 		t.Cleanup(func() {
 			err = ctr.Restore(ctx)

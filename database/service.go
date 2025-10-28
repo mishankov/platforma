@@ -64,7 +64,7 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 
 	for _, migr := range migrations {
 		if !slices.ContainsFunc(migrationLogs, func(l MigrationLog) bool {
-			return l.Repository == "platforma_migrations" && l.MigrationId == migr.ID
+			return l.Repository == "platforma_migration" && l.MigrationId == migr.ID
 		}) {
 			err := s.ApplyMigration(ctx, migr)
 			if err != nil {
