@@ -26,8 +26,8 @@ func (s *service) getMigrationLogs(ctx context.Context) ([]migrationLog, error) 
 	return logs, nil
 }
 
-func (s *service) saveMigrationLog(ctx context.Context, repository, migrationId string) error {
-	err := s.repo.saveMigrationLog(ctx, migrationLog{Repository: repository, MigrationId: migrationId, Timestamp: time.Now()})
+func (s *service) saveMigrationLog(ctx context.Context, repository, migrationID string) error {
+	err := s.repo.saveMigrationLog(ctx, migrationLog{Repository: repository, MigrationID: migrationID, Timestamp: time.Now()})
 	if err != nil {
 		return fmt.Errorf("failed to save migration log: %w", err)
 	}
@@ -57,7 +57,7 @@ func (s *service) migrateSelf(ctx context.Context) error {
 
 	for _, migr := range migrations {
 		if !slices.ContainsFunc(migrationLogs, func(l migrationLog) bool {
-			return l.Repository == "platforma_migration" && l.MigrationId == migr.ID
+			return l.Repository == "platforma_migration" && l.MigrationID == migr.ID
 		}) {
 			err := s.applyMigration(ctx, migr)
 			if err != nil {
@@ -92,7 +92,7 @@ func (s *service) applyMigrations(ctx context.Context, migrations []Migration, m
 	appliedMigrations := []Migration{}
 	for _, migr := range migrations {
 		if !slices.ContainsFunc(migrationLogs, func(l migrationLog) bool {
-			return l.Repository == migr.repository && l.MigrationId == migr.ID
+			return l.Repository == migr.repository && l.MigrationID == migr.ID
 		}) {
 			err := s.applyMigration(ctx, migr)
 			if err != nil {

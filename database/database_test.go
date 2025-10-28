@@ -74,8 +74,8 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
 		}
 
-		if migrationLogs[0].MigrationId != "init" {
-			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		if migrationLogs[0].MigrationID != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationID)
 		}
 	})
 
@@ -124,8 +124,8 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
 		}
 
-		if migrationLogs[0].MigrationId != "init" {
-			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		if migrationLogs[0].MigrationID != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationID)
 		}
 	})
 
@@ -169,7 +169,7 @@ func TestMigrate(t *testing.T) {
 		}
 
 		if !slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "some_repo" && log.MigrationId == "init"
+			return log.Repository == "some_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to contain init migration for some_repo")
 		}
@@ -226,7 +226,7 @@ func TestMigrate(t *testing.T) {
 		}
 
 		if !slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "some_repo" && log.MigrationId == "init"
+			return log.Repository == "some_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to contain init migration for some_repo")
 		}
@@ -237,7 +237,7 @@ func TestMigrate(t *testing.T) {
 		}
 
 		if !slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "other_repo" && log.MigrationId == "init"
+			return log.Repository == "other_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to contain init migration for other_repo, but only got: %s", migrationLogs)
 		}
@@ -301,13 +301,13 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
 		}
 
-		if migrationLogs[0].MigrationId != "init" {
-			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		if migrationLogs[0].MigrationID != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationID)
 		}
 
 		// because migration should be reverted
 		if slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "some_repo" && log.MigrationId == "init"
+			return log.Repository == "some_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to not contain init migration for some_repo")
 		}
@@ -319,7 +319,7 @@ func TestMigrate(t *testing.T) {
 
 		// because migration should be reverted
 		if slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "other_repo" && log.MigrationId == "init"
+			return log.Repository == "other_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to not contain init migration for other_repo, but only got: %s", migrationLogs)
 		}
@@ -383,20 +383,20 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
 		}
 
-		if migrationLogs[0].MigrationId != "init" {
-			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		if migrationLogs[0].MigrationID != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationID)
 		}
 
 		// because migration should be reverted or not even attempted
 		if slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "some_repo" && log.MigrationId == "init"
+			return log.Repository == "some_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to not contain init migration for some_repo")
 		}
 
 		// because migration should be reverted
 		if slices.ContainsFunc(migrationLogs, func(log migrationLog) bool {
-			return log.Repository == "other_repo" && log.MigrationId == "init"
+			return log.Repository == "other_repo" && log.MigrationID == "init"
 		}) {
 			t.Fatalf("expected migration log to not contain init migration for other_repo, but only got: %s", migrationLogs)
 		}
@@ -410,7 +410,7 @@ func TestMigrate(t *testing.T) {
 
 type migrationLog struct {
 	Repository  string    `db:"repository"`
-	MigrationId string    `db:"id"`
+	MigrationID string    `db:"id"`
 	Timestamp   time.Time `db:"timestamp"`
 }
 

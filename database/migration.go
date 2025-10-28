@@ -6,10 +6,11 @@ import (
 
 type migrationLog struct {
 	Repository  string    `db:"repository"`
-	MigrationId string    `db:"id"`
+	MigrationID string    `db:"id"`
 	Timestamp   time.Time `db:"timestamp"`
 }
 
+// Migration represents a database migration with up and down SQL statements.
 type Migration struct {
 	ID         string
 	Up         string
