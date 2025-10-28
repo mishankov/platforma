@@ -66,7 +66,7 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 			if err != nil {
 				revertErr := s.RevertMigrations(ctx, appliedMigrations)
 				if revertErr != nil {
-					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations", "error", revertErr)
 				}
 				return err
 			}
@@ -82,7 +82,7 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 			if err != nil {
 				revertErr := s.RevertMigrations(ctx, appliedMigrations)
 				if revertErr != nil {
-					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations", "error", revertErr)
 				}
 				return err
 			}
@@ -116,7 +116,7 @@ func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, m
 			if err != nil {
 				revertErr := s.RevertMigrations(ctx, appliedMigrations)
 				if revertErr != nil {
-					log.ErrorContext(ctx, "got error(s) trying to revert migrations: %s", revertErr.Error())
+					log.ErrorContext(ctx, "got error(s) trying to revert migrations", "error", revertErr)
 				}
 				return err
 			}
