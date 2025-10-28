@@ -120,6 +120,7 @@ func (s *service) ApplyMigrations(ctx context.Context, migrations []Migration, m
 				}
 				return err
 			}
+			appliedMigrations = append(appliedMigrations, migr)
 		}
 	}
 
