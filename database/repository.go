@@ -7,15 +7,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type Repository struct {
+type repository struct {
 	db *sqlx.DB
 }
 
-func newRepository(db *sqlx.DB) *Repository {
-	return &Repository{db: db}
+func newRepository(db *sqlx.DB) *repository {
+	return &repository{db: db}
 }
 
-func (r *Repository) Migrations() []Migration {
+func (r *repository) migrations() []Migration {
 	return []Migration{{
 		ID:   "init",
 		Up:   "CREATE TABLE IF NOT EXISTS platforma_migrations (repository TEXT, id TEXT, timestamp TIMESTAMP)",
@@ -23,8 +23,8 @@ func (r *Repository) Migrations() []Migration {
 	}}
 }
 
-func (r *Repository) GetMigrationLogs(ctx context.Context) ([]MigrationLog, error) {
-	var migrations []MigrationLog
+func (r *repository) getMigrationLogs(ctx context.Context) ([]migrationLog, error) {
+	var migrations []migrationLog
 	err := r.db.SelectContext(ctx, &migrations, "SELECT * FROM platforma_migrations")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration logs: %w", err)
@@ -33,7 +33,7 @@ func (r *Repository) GetMigrationLogs(ctx context.Context) ([]MigrationLog, erro
 	return migrations, nil
 }
 
-func (r *Repository) SaveMigrationLog(ctx context.Context, log MigrationLog) error {
+func (r *repository) saveMigrationLog(ctx context.Context, log migrationLog) error {
 	query := `
 		INSERT INTO platforma_migrations (repository, id, timestamp)
 		VALUES (:repository, :id, :timestamp)
@@ -45,7 +45,7 @@ func (r *Repository) SaveMigrationLog(ctx context.Context, log MigrationLog) err
 	return nil
 }
 
-func (r *Repository) ExecuteQuery(ctx context.Context, query string) error {
+func (r *repository) executeQuery(ctx context.Context, query string) error {
 	_, err := r.db.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)

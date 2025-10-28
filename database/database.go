@@ -36,13 +36,13 @@ func (db *Database) RegisterRepository(name string, repository any) {
 
 func (db *Database) Migrate(ctx context.Context) error {
 	// Ensure that migration table exists
-	err := db.service.MigrateSelf(ctx)
+	err := db.service.migrateSelf(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Get completed migrations
-	migrationLogs, err := db.service.GetMigrationLogs(ctx)
+	migrationLogs, err := db.service.getMigrationLogs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to select migrations state: %w", err)
 	}
@@ -56,7 +56,7 @@ func (db *Database) Migrate(ctx context.Context) error {
 		}
 	}
 
-	err = db.service.ApplyMigrations(ctx, migrations, migrationLogs)
+	err = db.service.applyMigrations(ctx, migrations, migrationLogs)
 	if err != nil {
 		return err
 	}
