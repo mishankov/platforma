@@ -1,7 +1,6 @@
 version: "2"
 
 linters:
-  # consider to add: cyclop
   default: none
   enable:
     - bodyclose
