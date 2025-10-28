@@ -122,6 +122,11 @@ func TestMigrate(t *testing.T) {
 		}) {
 			t.Fatalf("expected migration log to contain init migration for some_repo")
 		}
+
+		_, err = db.ExecContext(ctx, "SELECT * FROM simple_repo")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
 	})
 
 	t.Run("migrate database with multiple repositories", func(t *testing.T) {
@@ -175,10 +180,20 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected migration log to contain init migration for some_repo")
 		}
 
+		_, err = db.ExecContext(ctx, "SELECT * FROM simple_repo")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
 		if !slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
 			return log.Repository == "other_repo" && log.MigrationId == "init"
 		}) {
-			t.Fatalf("expected migration log to contain init migration for other_repo")
+			t.Fatalf("expected migration log to contain init migration for other_repo, but only got: %s", migrationLogs)
+		}
+
+		_, err = db.ExecContext(ctx, "SELECT * FROM other_repo")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
 		}
 	})
 
