@@ -38,6 +38,10 @@ jobs:
         with:
           go-version: stable
 
+      - name: macos docker fix
+        if: ${{ matrix.os == 'macos' }}
+        run: export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+
       - name: Test
         run: go test -v -coverprofile="coverage.txt" ./...
 
