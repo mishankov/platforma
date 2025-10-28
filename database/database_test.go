@@ -76,21 +76,98 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("database is nil")
 		}
 
-		db.RegisterRepository("some_repo", simpleRepo{})
+		db.RegisterRepository("some_repo", simpleRepo{migrations: []database.Migration{{
+			ID:   "init",
+			Up:   "CREATE TABLE IF NOT EXISTS simple_repo (id TEXT)",
+			Down: "DROP TABLE simple_repo",
+		}}})
 
 		err = db.Migrate(ctx)
 		if err != nil {
 			t.Fatalf("failed to migrate database: %s", err.Error())
 		}
 	})
+
+	t.Run("migrate database with multiple repositories", func(t *testing.T) {
+		t.Cleanup(func() {
+			err = ctr.Restore(ctx)
+			if err != nil {
+				t.Fatalf("failed to restore db: %s", err.Error())
+			}
+		})
+
+		db, err := database.New(dbURL)
+		if err != nil {
+			t.Fatalf("failed to initialize database: %s", err.Error())
+		}
+
+		if db == nil {
+			t.Fatalf("database is nil")
+		}
+
+		db.RegisterRepository("some_repo", simpleRepo{migrations: []database.Migration{{
+			ID:   "init",
+			Up:   "CREATE TABLE IF NOT EXISTS simple_repo (id TEXT)",
+			Down: "DROP TABLE simple_repo",
+		}}})
+
+		db.RegisterRepository("other_repo", simpleRepo{migrations: []database.Migration{{
+			ID:   "init",
+			Up:   "CREATE TABLE IF NOT EXISTS other_repo (id TEXT)",
+			Down: "DROP TABLE other_repo",
+		}}})
+
+		err = db.Migrate(ctx)
+		if err != nil {
+			t.Fatalf("failed to migrate database: %s", err.Error())
+		}
+	})
+
+	t.Run("migrate database with failing migration", func(t *testing.T) {
+		t.Cleanup(func() {
+			err = ctr.Restore(ctx)
+			if err != nil {
+				t.Fatalf("failed to restore db: %s", err.Error())
+			}
+		})
+
+		db, err := database.New(dbURL)
+		if err != nil {
+			t.Fatalf("failed to initialize database: %s", err.Error())
+		}
+
+		if db == nil {
+			t.Fatalf("database is nil")
+		}
+
+		db.RegisterRepository("some_repo", simpleRepo{migrations: []database.Migration{{
+			ID:   "init",
+			Up:   "CREATE TABLE IF NOT EXISTS simple_repo (id TEXT)",
+			Down: "DROP TABLE simple_repo",
+		}}})
+
+		db.RegisterRepository("other_repo", simpleRepo{migrations: []database.Migration{{
+			ID:   "init",
+			Up:   "CREATE TABLE IF NOT EXISTS other_repo (id TEXT)",
+			Down: "DROP TABLE other_repo",
+		}, {
+			ID:   "failing",
+			Up:   "not even SQL here",
+			Down: "no need for this",
+		}}})
+
+		err = db.Migrate(ctx)
+		if err == nil {
+			t.Fatalf("migration expected to fail")
+		}
+		t.Logf("migration error: %s", err.Error())
+	})
 }
 
-type simpleRepo struct{}
+type simpleRepo struct {
+	migrations []database.Migration
+}
 
 func (r simpleRepo) Migrations() []database.Migration {
-	return []database.Migration{{
-		ID:   "init",
-		Up:   "CREATE TABLE IF NOT EXISTS simple_repo (id TEXT)",
-		Down: "DROP TABLE simple_repo",
-	}}
+	return r.migrations
 }
