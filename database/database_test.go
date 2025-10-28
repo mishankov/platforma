@@ -112,14 +112,15 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected no errors, got: %s", err.Error())
 		}
 
+		// 2 = platforma_migrations + simple_repo
 		if len(migrationLogs) != 2 {
-			t.Fatalf("expected two migrations, got: %d", len(migrationLogs))
+			t.Fatalf("expected 2 migrations, got: %d", len(migrationLogs))
 		}
 
 		if !slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
 			return log.Repository == "some_repo" && log.MigrationId == "init"
 		}) {
-			t.Fatalf("expected migration log to contain init migration of some_repo")
+			t.Fatalf("expected migration log to contain init migration for some_repo")
 		}
 	})
 
@@ -155,6 +156,29 @@ func TestMigrate(t *testing.T) {
 		err = db.Migrate(ctx)
 		if err != nil {
 			t.Fatalf("failed to migrate database: %s", err.Error())
+		}
+
+		var migrationLogs []database.MigrationLog
+		err = db.SelectContext(ctx, &migrationLogs, "SELECT * FROM platforma_migrations")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		// 3 = platforma_migrations + simple_repo
+		if len(migrationLogs) != 3 {
+			t.Fatalf("expected 3 migrations, got: %d", len(migrationLogs))
+		}
+
+		if !slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
+			return log.Repository == "some_repo" && log.MigrationId == "init"
+		}) {
+			t.Fatalf("expected migration log to contain init migration for some_repo")
+		}
+
+		if !slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
+			return log.Repository == "other_repo" && log.MigrationId == "init"
+		}) {
+			t.Fatalf("expected migration log to contain init migration for other_repo")
 		}
 	})
 
