@@ -1,0 +1,19 @@
+version: "3"
+
+tasks:
+  lint:
+    cmds:
+      - golangci-lint run
+
+  fix:
+    cmds:
+      - golangci-lint run --fix
+
+  test:
+    cmds:
+      - go test -cover -v ./...
+
+  check:
+    deps:
+      - lint
+      - test

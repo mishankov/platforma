@@ -1,14 +1,13 @@
 package database
 
 import (
-	"database/sql"
 	"time"
 )
 
-type migrations struct {
-	Repository  string         `db:"repository"`
-	MigrationId sql.NullString `db:"id"`
-	Timestamp   time.Time      `db:"timestamp"`
+type MigrationLog struct {
+	Repository  string    `db:"repository"`
+	MigrationId string    `db:"id"`
+	Timestamp   time.Time `db:"timestamp"`
 }
 
 type Migration struct {
@@ -18,10 +17,6 @@ type Migration struct {
 	repository string
 }
 
-type Schema struct {
-	Queries []string
-}
-
-type shemer interface {
-	Schema() ([]Migration, Schema)
+type migrator interface {
+	Migrations() []Migration
 }
