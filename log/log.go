@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 )
 
 type logger interface {
@@ -19,7 +20,7 @@ type logger interface {
 	ErrorContext(ctx context.Context, msg string, args ...any)
 }
 
-var Logger logger = slog.Default() //nolint:gochecknoglobals
+var Logger logger = New(os.Stdout, "text", slog.LevelInfo, nil) //nolint:gochecknoglobals
 
 // SetDefault sets the default logger used by the package-level logging functions.
 func SetDefault(l logger) {
