@@ -169,7 +169,7 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected no errors, got: %s", err.Error())
 		}
 
-		// 3 = platforma_migrations + simple_repo
+		// 3 = platforma_migrations + repos2
 		if len(migrationLogs) != 3 {
 			t.Fatalf("expected 3 migrations, got: %d", len(migrationLogs))
 		}
@@ -235,6 +235,48 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("migration expected to fail")
 		}
 		t.Logf("migration error: %s", err.Error())
+
+		var migrationLogs []database.MigrationLog
+		err = db.SelectContext(ctx, &migrationLogs, "SELECT * FROM platforma_migrations")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(migrationLogs) != 1 {
+			t.Fatalf("expected 1 migration, got: %d", len(migrationLogs))
+		}
+
+		if migrationLogs[0].Repository != "platforma_migration" {
+			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
+		}
+
+		if migrationLogs[0].MigrationId != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		}
+
+		// because migration should be reverted
+		if slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
+			return log.Repository == "some_repo" && log.MigrationId == "init"
+		}) {
+			t.Fatalf("expected migration log to not contain init migration for some_repo")
+		}
+
+		_, err = db.ExecContext(ctx, "SELECT * FROM simple_repo")
+		if err == nil {
+			t.Fatalf("expected error, got nill")
+		}
+
+		// because migration should be reverted
+		if slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
+			return log.Repository == "other_repo" && log.MigrationId == "init"
+		}) {
+			t.Fatalf("expected migration log to not contain init migration for other_repo, but only got: %s", migrationLogs)
+		}
+
+		_, err = db.ExecContext(ctx, "SELECT * FROM other_repo")
+		if err == nil {
+			t.Fatalf("expected error, got nill")
+		}
 	})
 
 	t.Run("migrate database with failing migration and revert", func(t *testing.T) {
