@@ -8,6 +8,6 @@ func NewRepository() *Repository {
 	return &Repository{}
 }
 
-func (r *Repository) Schema() ([]database.Migration, database.Schema) {
-	return []database.Migration{}, database.Schema{}
+func (r *Repository) Migrations() ([]database.Migration) {
+	return []database.Migration{}
 }

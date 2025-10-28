@@ -25,7 +25,7 @@ func NewRepository(db db) *Repository {
 	}
 }
 
-func (r *Repository) Schema() []database.Migration {
+func (r *Repository) Migrations() []database.Migration {
 	return []database.Migration{{
 		ID: "init",
 		Up: `CREATE TABLE IF NOT EXISTS sessions (

@@ -25,7 +25,7 @@ func NewRepository(db db) *Repository {
 	}
 }
 
-func (r *Repository) Schema() []database.Migration {
+func (r *Repository) Migrations() []database.Migration {
 	return []database.Migration{{
 		ID: "init",
 		Up: `CREATE TABLE IF NOT EXISTS users (
@@ -74,7 +74,7 @@ func (r *Repository) Create(ctx context.Context, user *User) error {
 
 func (r *Repository) UpdatePassword(ctx context.Context, id, password, salt string) error {
 	query := `
-		UPDATE users 
+		UPDATE users
 		SET password = $1, salt = $2, updated = CURRENT_TIMESTAMP
 		WHERE id = $3
 	`
