@@ -13,7 +13,6 @@ import (
 type repository interface {
 	GetMigrationLogs(ctx context.Context) ([]MigrationLog, error)
 	SaveMigrationLog(ctx context.Context, log MigrationLog) error
-	RemoveMigrationLog(ctx context.Context, repository, id string) error
 	ExecuteQuery(ctx context.Context, query string) error
 	Migrations() []Migration
 }

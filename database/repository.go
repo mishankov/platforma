@@ -45,15 +45,6 @@ func (r *Repository) SaveMigrationLog(ctx context.Context, log MigrationLog) err
 	return nil
 }
 
-func (r *Repository) RemoveMigrationLog(ctx context.Context, repository, id string) error {
-	query := `DELETE FROM platforma_migrations WHERE repository = $1 AND id = $2`
-	_, err := r.db.ExecContext(ctx, query, repository, id)
-	if err != nil {
-		return fmt.Errorf("failed to remove migration log: %w", err)
-	}
-	return nil
-}
-
 func (r *Repository) ExecuteQuery(ctx context.Context, query string) error {
 	_, err := r.db.ExecContext(ctx, query)
 	if err != nil {
