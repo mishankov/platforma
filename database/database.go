@@ -1,3 +1,4 @@
+// Package database provides database connection and migration functionality.
 package database
 
 import (
@@ -5,17 +6,18 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
+// Database represents a database connection with migration capabilities.
 type Database struct {
 	*sqlx.DB
 	repositories map[string]any
 	migrators    map[string]migrator
-	repository   *Repository
 	service      *service
 }
 
+// New creates a new Database instance with the given connection string.
 func New(connection string) (*Database, error) {
 	db, err := sqlx.Connect("postgres", connection)
 	if err != nil {
@@ -24,9 +26,11 @@ func New(connection string) (*Database, error) {
 
 	repository := newRepository(db)
 	service := newService(repository)
-	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), repository: repository, service: service}, nil
+	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), service: service}, nil
 }
 
+// RegisterRepository registers a repository in the database.
+// If repository implements migrator interface, it will migrate when `Migrate` is called.
 func (db *Database) RegisterRepository(name string, repository any) {
 	db.repositories[name] = repository
 
@@ -35,15 +39,16 @@ func (db *Database) RegisterRepository(name string, repository any) {
 	}
 }
 
+// Migrate runs all pending migrations for registered repositories.
 func (db *Database) Migrate(ctx context.Context) error {
 	// Ensure that migration table exists
-	err := db.service.MigrateSelf(ctx)
+	err := db.service.migrateSelf(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Get completed migrations
-	migrationLogs, err := db.service.GetMigrationLogs(ctx)
+	migrationLogs, err := db.service.getMigrationLogs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to select migrations state: %w", err)
 	}
@@ -57,7 +62,7 @@ func (db *Database) Migrate(ctx context.Context) error {
 		}
 	}
 
-	err = db.service.ApplyMigrations(ctx, migrations, migrationLogs)
+	err = db.service.applyMigrations(ctx, migrations, migrationLogs)
 	if err != nil {
 		return err
 	}

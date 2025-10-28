@@ -1,8 +1,6 @@
 version: "2"
 
 linters:
-  # consider to add: cyclop
-  #  find sane settings for revive
   default: none
   enable:
     - bodyclose
@@ -35,6 +33,7 @@ linters:
     - paralleltest
     - perfsprint
     - prealloc
+    - revive
     - staticcheck
     - tagalign
     - tagliatelle
@@ -63,6 +62,10 @@ linters:
           json: camel
   exclusions:
     rules:
+      - path-except: "database/*"
+        linters:
+          - revive
+
       - path: _test\.go
         linters:
           - dupl
