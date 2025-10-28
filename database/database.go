@@ -12,7 +12,6 @@ type Database struct {
 	*sqlx.DB
 	repositories map[string]any
 	migrators    map[string]migrator
-	repository   *Repository
 	service      *service
 }
 
@@ -24,7 +23,7 @@ func New(connection string) (*Database, error) {
 
 	repository := newRepository(db)
 	service := newService(repository)
-	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), repository: repository, service: service}, nil
+	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), service: service}, nil
 }
 
 func (db *Database) RegisterRepository(name string, repository any) {
