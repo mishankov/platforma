@@ -1,11 +1,9 @@
-package database_test
+package database
 
 import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/mishankov/platforma/database"
 )
 
 func TestSaveMigrationLogs(t *testing.T) {
@@ -13,9 +11,9 @@ func TestSaveMigrationLogs(t *testing.T) {
 	t.Run("single successful", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}})
+		err := service.SaveMigrationLogs(context.TODO(), []Migration{{ID: "some id"}})
 		if err != nil {
 			t.Fatalf("expected no errors, got: %s", err.Error())
 		}
@@ -24,12 +22,12 @@ func TestSaveMigrationLogs(t *testing.T) {
 	t.Run("single error", func(t *testing.T) {
 		t.Parallel()
 		ErrSome := errors.New("some error")
-		repo := &repoMock{saveMigrationLog: func(ctx context.Context, ml database.MigrationLog) error {
+		repo := &repoMock{saveMigrationLog: func(ctx context.Context, ml MigrationLog) error {
 			return ErrSome
 		}}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}})
+		err := service.SaveMigrationLogs(context.TODO(), []Migration{{ID: "some id"}})
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}
@@ -43,7 +41,7 @@ func TestSaveMigrationLogs(t *testing.T) {
 		t.Parallel()
 		ErrSome := errors.New("some error")
 		ErrOther := errors.New("other error")
-		repo := &repoMock{saveMigrationLog: func(ctx context.Context, ml database.MigrationLog) error {
+		repo := &repoMock{saveMigrationLog: func(ctx context.Context, ml MigrationLog) error {
 			if ml.MigrationId == "some id" {
 				return ErrSome
 			}
@@ -54,9 +52,9 @@ func TestSaveMigrationLogs(t *testing.T) {
 
 			return nil
 		}}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		err := service.SaveMigrationLogs(context.TODO(), []database.Migration{{ID: "some id"}, {ID: "other id"}})
+		err := service.SaveMigrationLogs(context.TODO(), []Migration{{ID: "some id"}, {ID: "other id"}})
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}
@@ -76,7 +74,7 @@ func TestGetMigrationLogs(t *testing.T) {
 	t.Run("successful no logs", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo)
+		service := newService(repo)
 
 		logs, err := service.GetMigrationLogs(context.TODO())
 		if err != nil {
@@ -90,10 +88,10 @@ func TestGetMigrationLogs(t *testing.T) {
 
 	t.Run("successful some logs", func(t *testing.T) {
 		t.Parallel()
-		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
-			return []database.MigrationLog{{}, {}}, nil
+		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]MigrationLog, error) {
+			return []MigrationLog{{}, {}}, nil
 		}}
-		service := database.NewService(repo)
+		service := newService(repo)
 
 		logs, err := service.GetMigrationLogs(context.TODO())
 		if err != nil {
@@ -108,10 +106,10 @@ func TestGetMigrationLogs(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		t.Parallel()
 		ErrSome := errors.New("some error")
-		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]database.MigrationLog, error) {
+		repo := &repoMock{getMigrationLogs: func(ctx context.Context) ([]MigrationLog, error) {
 			return nil, ErrSome
 		}}
-		service := database.NewService(repo)
+		service := newService(repo)
 
 		_, err := service.GetMigrationLogs(context.TODO())
 		if err == nil {
@@ -129,9 +127,9 @@ func TestRevertMigrations(t *testing.T) {
 	t.Run("successful revert", func(t *testing.T) {
 		t.Parallel()
 		repo := &repoMock{}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		migrations := []database.Migration{{ID: "migration1"}, {ID: "migration2"}}
+		migrations := []Migration{{ID: "migration1"}, {ID: "migration2"}}
 
 		err := service.RevertMigrations(context.TODO(), migrations)
 		if err != nil {
@@ -147,9 +145,9 @@ func TestRevertMigrations(t *testing.T) {
 				return ErrSome
 			},
 		}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		err := service.RevertMigrations(context.TODO(), []database.Migration{{ID: "migration1"}})
+		err := service.RevertMigrations(context.TODO(), []Migration{{ID: "migration1"}})
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}
@@ -176,9 +174,9 @@ func TestRevertMigrations(t *testing.T) {
 				return nil
 			},
 		}
-		service := database.NewService(repo)
+		service := newService(repo)
 
-		err := service.RevertMigrations(context.TODO(), []database.Migration{{Down: "migration1"}, {Down: "migration2"}})
+		err := service.RevertMigrations(context.TODO(), []Migration{{Down: "migration1"}, {Down: "migration2"}})
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}
@@ -194,19 +192,19 @@ func TestRevertMigrations(t *testing.T) {
 }
 
 type repoMock struct {
-	getMigrationLogs func(context.Context) ([]database.MigrationLog, error)
-	saveMigrationLog func(context.Context, database.MigrationLog) error
+	getMigrationLogs func(context.Context) ([]MigrationLog, error)
+	saveMigrationLog func(context.Context, MigrationLog) error
 	executeQuery     func(context.Context, string) error
 }
 
-func (r *repoMock) GetMigrationLogs(ctx context.Context) ([]database.MigrationLog, error) {
+func (r *repoMock) GetMigrationLogs(ctx context.Context) ([]MigrationLog, error) {
 	if r.getMigrationLogs != nil {
 		return r.getMigrationLogs(ctx)
 	}
 	return nil, nil
 }
 
-func (r *repoMock) SaveMigrationLog(ctx context.Context, log database.MigrationLog) error {
+func (r *repoMock) SaveMigrationLog(ctx context.Context, log MigrationLog) error {
 	if r.saveMigrationLog != nil {
 		return r.saveMigrationLog(ctx, log)
 	}
@@ -225,6 +223,6 @@ func (r *repoMock) ExecuteQuery(ctx context.Context, query string) error {
 	return nil
 }
 
-func (r *repoMock) Migrations() []database.Migration {
+func (r *repoMock) Migrations() []Migration {
 	return nil
 }
