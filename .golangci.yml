@@ -65,10 +65,15 @@ linters:
     rules:
       - path: _test\.go
         linters:
-        - err113
-        - errcheck
-        - gosec
-        - nilnil
+          - err113
+          - errcheck
+          - gosec
+          - nilnil
+
+      - path: database_test\.go
+        linters:
+          - paralleltest
+          - tparallel
 
 formatters:
   enable:
