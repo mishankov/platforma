@@ -58,20 +58,8 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 	appliedMigrations := []Migration{}
 	migrationLogs, err := s.repo.GetMigrationLogs(ctx)
 
-	// If GetMigrationLogs returns error, log table probably does not exist,
-	// so we should apply all migrations for it
 	if err != nil {
-		for _, migr := range migrations {
-			err := s.ApplyMigration(ctx, migr)
-			if err != nil {
-				revertErr := s.RevertMigrations(ctx, appliedMigrations)
-				if revertErr != nil {
-					log.ErrorContext(ctx, "got error(s) trying to revert migrations", "error", revertErr)
-				}
-				return err
-			}
-			appliedMigrations = append(appliedMigrations, migr)
-		}
+		log.InfoContext(ctx, "migrations log table does not exist yet")
 	}
 
 	for _, migr := range migrations {
@@ -86,6 +74,7 @@ func (s *service) MigrateSelf(ctx context.Context) error {
 				}
 				return err
 			}
+			migr.repository = "platforma_migration"
 			appliedMigrations = append(appliedMigrations, migr)
 		}
 	}

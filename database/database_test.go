@@ -2,6 +2,7 @@ package database_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/mishankov/platforma/database"
@@ -57,6 +58,24 @@ func TestMigrate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to migrate database: %s", err.Error())
 		}
+
+		var migrationLogs []database.MigrationLog
+		err = db.SelectContext(ctx, &migrationLogs, "SELECT * FROM platforma_migrations")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(migrationLogs) != 1 {
+			t.Fatalf("expected single migration, got: %d", len(migrationLogs))
+		}
+
+		if migrationLogs[0].Repository != "platforma_migration" {
+			t.Fatalf("expected repository to be platforma_migration, got: %s", migrationLogs[0].Repository)
+		}
+
+		if migrationLogs[0].MigrationId != "init" {
+			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
+		}
 	})
 
 	t.Run("migrate database with single repository", func(t *testing.T) {
@@ -85,6 +104,22 @@ func TestMigrate(t *testing.T) {
 		err = db.Migrate(ctx)
 		if err != nil {
 			t.Fatalf("failed to migrate database: %s", err.Error())
+		}
+
+		var migrationLogs []database.MigrationLog
+		err = db.SelectContext(ctx, &migrationLogs, "SELECT * FROM platforma_migrations")
+		if err != nil {
+			t.Fatalf("expected no errors, got: %s", err.Error())
+		}
+
+		if len(migrationLogs) != 2 {
+			t.Fatalf("expected two migrations, got: %d", len(migrationLogs))
+		}
+
+		if !slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
+			return log.Repository == "some_repo" && log.MigrationId == "init"
+		}) {
+			t.Fatalf("expected migration log to contain init migration of some_repo")
 		}
 	})
 
