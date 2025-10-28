@@ -336,17 +336,11 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("expected migration id to be init, got: %s", migrationLogs[0].MigrationId)
 		}
 
-		// because migration should be reverted...
+		// because migration should be reverted or not even attempted
 		if slices.ContainsFunc(migrationLogs, func(log database.MigrationLog) bool {
 			return log.Repository == "some_repo" && log.MigrationId == "init"
 		}) {
 			t.Fatalf("expected migration log to not contain init migration for some_repo")
-		}
-
-		// ... but it also should fail to revert, so table exists
-		_, err = db.ExecContext(ctx, "SELECT * FROM simple_repo")
-		if err != nil {
-			t.Fatalf("expected no errors, got: %s", err.Error())
 		}
 
 		// because migration should be reverted
