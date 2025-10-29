@@ -92,7 +92,7 @@ func (a *Application) Run(ctx context.Context) error {
 		ctx = context.Background()
 	}
 
-	log.InfoContext(ctx, "Starting application", "startupTasks", len(a.startupTasks))
+	log.InfoContext(ctx, "starting application", "startupTasks", len(a.startupTasks))
 
 	for dbName, db := range a.databases {
 		log.InfoContext(ctx, "migrating database", "database", dbName)

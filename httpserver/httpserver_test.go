@@ -2,115 +2,236 @@ package httpserver_test
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/mishankov/platforma/httpserver"
 )
 
-// testHandler is a simple handler for testing
-type testHandler struct{}
+func TestHTTPServer(t *testing.T) {
+	t.Parallel()
 
-func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	t.Run("single http.HandlerFunc endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("", 0)
+
+		server.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
+			w.Write([]byte("pong"))
+		})
+
+		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		if string(body) != "pong" {
+			t.Fatalf("expected body to be 'pong', got %s", string(body))
+		}
+	})
+
+	t.Run("single http.Handler endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		pingHandler := &handler{
+			serveHTTP: func(w http.ResponseWriter, _ *http.Request) {
+				w.Write([]byte("pong"))
+			},
+		}
+
+		server := httpserver.New("", 0)
+
+		server.Handle("/ping", pingHandler)
+
+		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		if string(body) != "pong" {
+			t.Fatalf("expected body to be 'pong', got %s", string(body))
+		}
+	})
+
+	t.Run("handle group", func(t *testing.T) {
+		t.Parallel()
+
+		hg := httpserver.NewHandlerGroup()
+		hg.Handle("/test", &handler{})
+
+		server := httpserver.New("", 0)
+		server.HandleGroup("/hg", hg)
+
+		r := httptest.NewRequest(http.MethodGet, "/hg/test", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+
+		resp := w.Result()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status code to be 200, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("healthcheck", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("8080", 0)
+		hcData, ok := server.Healthcheck(context.TODO()).(map[string]any)
+		if !ok {
+			t.Fatal("failed type assert health data")
+		}
+
+		port := hcData["port"]
+		if port != "8080" {
+			t.Fatalf("expected port to be 8080, got %s", port)
+		}
+	})
+
+	t.Run("use", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("", 0)
+
+		customMiddleware := &testMiddleware{
+			wrapFunc: func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("X-Test-Middleware", "applied")
+					next.ServeHTTP(w, r)
+				})
+			},
+		}
+		server.Use(customMiddleware)
+		server.Handle("/test", &handler{})
+
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+		resp := w.Result()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status code to be 200, got %d", resp.StatusCode)
+		}
+
+		middlewareHeader := resp.Header.Get("X-Test-Middleware")
+		if middlewareHeader != "applied" {
+			t.Fatalf("expected X-Test-Middleware header to be 'applied', got %s", middlewareHeader)
+		}
+	})
+
+	t.Run("use func", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("", 0)
+
+		customMiddlewareFunc := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Test-Func-Middleware", "applied")
+				next.ServeHTTP(w, r)
+			})
+		}
+
+		server.UseFunc(customMiddlewareFunc)
+		server.Handle("/test", &handler{})
+
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+		resp := w.Result()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status code to be 200, got %d", resp.StatusCode)
+		}
+
+		middlewareHeader := resp.Header.Get("X-Test-Func-Middleware")
+		if middlewareHeader != "applied" {
+			t.Fatalf("expected X-Test-Middleware header to be 'applied', got %s", middlewareHeader)
+		}
+	})
+
+	t.Run("multiple middlewares", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("", 0)
+
+		middlewareCallLog := []string{}
+
+		firstMiddleware := &testMiddleware{
+			wrapFunc: func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					middlewareCallLog = append(middlewareCallLog, "first")
+					w.Header().Set("X-First-Middleware", "applied")
+					next.ServeHTTP(w, r)
+				})
+			},
+		}
+
+		secondMiddlewareFunc := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				middlewareCallLog = append(middlewareCallLog, "second")
+				w.Header().Set("X-Second-Middleware", "applied")
+				next.ServeHTTP(w, r)
+			})
+		}
+
+		server.Use(firstMiddleware)
+		server.UseFunc(secondMiddlewareFunc)
+
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+		resp := w.Result()
+
+		firstHeader := resp.Header.Get("X-First-Middleware")
+		if firstHeader != "applied" {
+			t.Fatalf("expected X-First-Middleware header to be 'applied', got %s", firstHeader)
+		}
+
+		secondHeader := resp.Header.Get("X-Second-Middleware")
+		if secondHeader != "applied" {
+			t.Fatalf("expected X-Second-Middleware header to be 'applied', got %s", secondHeader)
+		}
+
+		if middlewareCallLog[0] != "first" {
+			t.Fatalf("expected first middleware to be called first, got %s", middlewareCallLog[0])
+		}
+
+		if middlewareCallLog[1] != "second" {
+			t.Fatalf("expected second middleware to be called second, got %s", middlewareCallLog[1])
+		}
+	})
+}
+
+type handler struct {
+	serveHTTP func(http.ResponseWriter, *http.Request)
+}
+
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if h.serveHTTP != nil {
+		h.serveHTTP(w, r)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }
 
-func TestHttpServer_ShutdownCompletesBeforeTimeout(t *testing.T) {
-	t.Parallel()
-
-	// Create a test HTTP server directly to test shutdown behavior
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: &testHandler{},
-	}
-
-	// Start server in goroutine
-	go func() {
-		server.ListenAndServe()
-	}()
-
-	// Give server a moment to start
-	time.Sleep(100 * time.Millisecond)
-
-	// Test shutdown with a long timeout but expect it to complete quickly
-	shutdownTimeout := 5 * time.Second
-	startTime := time.Now()
-
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
-
-	err := server.Shutdown(ctx)
-	shutdownDuration := time.Since(startTime)
-
-	// Verify shutdown completed quickly (much less than full timeout)
-	if shutdownDuration > 1*time.Second {
-		t.Errorf("shutdown took %v, expected to complete much faster than %v timeout", shutdownDuration, shutdownTimeout)
-	}
-
-	if err != nil {
-		t.Errorf("unexpected shutdown error: %v", err)
-	}
+type testMiddleware struct {
+	wrapFunc func(http.Handler) http.Handler
 }
 
-func TestHttpServer_ShutdownWithNoActiveConnections(t *testing.T) {
-	t.Parallel()
-
-	// Create HttpServer instance to test the integration
-	httpServer := httpserver.New("8081", 3*time.Second)
-	httpServer.Handle("/test", &testHandler{})
-
-	// Create a test server to simulate the internal http.Server
-	testServer := &http.Server{
-		Addr:    ":8081",
-		Handler: &testHandler{},
+func (m *testMiddleware) Wrap(next http.Handler) http.Handler {
+	if m.wrapFunc != nil {
+		return m.wrapFunc(next)
 	}
-
-	// Start server
-	go func() {
-		testServer.ListenAndServe()
-	}()
-
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
-
-	// Test shutdown - should complete quickly since no active connections
-	startTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	err := testServer.Shutdown(ctx)
-	shutdownDuration := time.Since(startTime)
-
-	// Should complete much faster than the full timeout
-	if shutdownDuration > 500*time.Millisecond {
-		t.Errorf("shutdown with no connections took %v, expected <500ms", shutdownDuration)
-	}
-
-	if err != nil {
-		t.Errorf("unexpected shutdown error: %v", err)
-	}
-}
-
-func TestHttpServer_Healthcheck(t *testing.T) {
-	t.Parallel()
-
-	server := httpserver.New("8083", 5*time.Second)
-
-	result := server.Healthcheck(context.Background())
-
-	healthMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map[string]any, got %T", result)
-	}
-
-	port, exists := healthMap["port"]
-	if !exists {
-		t.Error("healthcheck should contain 'port' field")
-	}
-
-	if port != "8083" {
-		t.Errorf("expected port '8083', got '%v'", port)
-	}
+	return next
 }

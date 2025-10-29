@@ -21,7 +21,7 @@ func (f MiddlewareFunc) Wrap(h http.Handler) http.Handler {
 
 // wrapHandlerInMiddleware wraps an http.Handler with a chain of middlewares.
 // The middlewares are applied in reverse order of the provided slice,
-// meaning the last middleware in the slice will be the first to execute.
+// meaning the last middleware in the slice will be the most inner.
 func wrapHandlerInMiddleware(handler http.Handler, middlewares []Middleware) http.Handler {
 	finalHandler := handler
 	for _, middleware := range slices.Backward(middlewares) {

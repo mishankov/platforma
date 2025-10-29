@@ -1,3 +1,4 @@
+// Package httpserver provides HTTP server functionality with middleware support.
 package httpserver
 
 import (
@@ -13,40 +14,22 @@ import (
 	"github.com/mishankov/platforma/log"
 )
 
-type HttpServer struct {
-	mux             *http.ServeMux
+type handleGroup = HandlerGroup
+
+// HTTPServer represents an HTTP server with middleware support and graceful shutdown.
+type HTTPServer struct {
+	*handleGroup
 	port            string
 	shutdownTimeout time.Duration
-	middlewares     []Middleware
 }
 
-func New(port string, shutdownTimeout time.Duration) *HttpServer {
-	return &HttpServer{mux: http.NewServeMux(), port: port, shutdownTimeout: shutdownTimeout}
+// New creates a new HTTPServer instance with the specified port and shutdown timeout.
+func New(port string, shutdownTimeout time.Duration) *HTTPServer {
+	return &HTTPServer{handleGroup: NewHandlerGroup(), port: port, shutdownTimeout: shutdownTimeout}
 }
 
-func (s *HttpServer) Handle(pattern string, handler http.Handler) {
-	s.mux.Handle(pattern, handler)
-}
-
-func (s *HttpServer) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	s.mux.HandleFunc(pattern, http.HandlerFunc(handler))
-}
-
-func (s *HttpServer) HandleGroup(pattern string, handler http.Handler) {
-	s.mux.Handle(pattern+"/", http.StripPrefix(pattern, handler))
-}
-
-func (s *HttpServer) Use(middlewares ...Middleware) {
-	s.middlewares = append(s.middlewares, middlewares...)
-}
-
-func (s *HttpServer) UseFunc(middlewareFuncs ...func(http.Handler) http.Handler) {
-	for _, middlewareFunc := range middlewareFuncs {
-		s.middlewares = append(s.middlewares, MiddlewareFunc(middlewareFunc))
-	}
-}
-
-func (s *HttpServer) Run(ctx context.Context) error {
+// Run starts the HTTP server and handles graceful shutdown on interrupt signals.
+func (s *HTTPServer) Run(ctx context.Context) error {
 	server := &http.Server{
 		Addr:              ":" + s.port,
 		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
@@ -70,15 +53,15 @@ func (s *HttpServer) Run(ctx context.Context) error {
 	defer shutdownRelease()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.ErrorContext(ctx, "HTTP shutdown error", "error", err)
-		return fmt.Errorf("failed to shutdown server: %w", err)
+		return fmt.Errorf("failed to gracefully shutdown HTTP server: %w", err)
 	}
 	log.InfoContext(ctx, "graceful shutdown completed.")
 
 	return nil
 }
 
-func (s *HttpServer) Healthcheck(ctx context.Context) any {
+// Healthcheck returns health check information for the HTTP server.
+func (s *HTTPServer) Healthcheck(_ context.Context) any {
 	return map[string]any{
 		"port": s.port,
 	}

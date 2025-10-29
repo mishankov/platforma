@@ -61,8 +61,11 @@ linters:
         rules:
           json: camel
   exclusions:
+    paths:
+      - demo-app
+
     rules:
-      - path-except: "database/*"
+      - path-except: "(database|httpserver)/*"
         linters:
           - revive
 
