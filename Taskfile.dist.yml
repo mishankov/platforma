@@ -17,8 +17,3 @@ tasks:
     deps:
       - lint
       - test
-
-  demo:
-    dir: demo-app
-    cmds:
-      - go run ./cmd/clock/main.go
