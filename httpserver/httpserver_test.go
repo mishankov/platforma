@@ -65,7 +65,12 @@ func TestHttpServer(t *testing.T) {
 		t.Parallel()
 
 		server := httpserver.New("8080", 0)
-		port := server.Healthcheck(context.TODO()).(map[string]any)["port"]
+		hcData, ok := server.Healthcheck(context.TODO()).(map[string]any)
+		if !ok {
+			t.Fatal("failed type assert health data")
+		}
+
+		port := hcData["port"]
 		if port != "8080" {
 			t.Errorf("expected port to be 8080, got %s", port)
 		}
