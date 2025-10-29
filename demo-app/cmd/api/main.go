@@ -53,4 +53,6 @@ func main() {
 	if err := app.Run(ctx); err != nil {
 		log.ErrorContext(ctx, "app finished with error", "error", err)
 	}
+
+	// Now you can access http://localhost:8080/ping and http://localhost:8080/subApi/clock URLs with GET method
 }
