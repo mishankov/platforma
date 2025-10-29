@@ -16,13 +16,13 @@ import (
 type handleGroup = HandlerGroup
 
 type HttpServer struct {
-	handleGroup
+	*handleGroup
 	port            string
 	shutdownTimeout time.Duration
 }
 
 func New(port string, shutdownTimeout time.Duration) *HttpServer {
-	return &HttpServer{handleGroup: HandlerGroup{mux: http.NewServeMux()}, port: port, shutdownTimeout: shutdownTimeout}
+	return &HttpServer{handleGroup: NewHandlerGroup(), port: port, shutdownTimeout: shutdownTimeout}
 }
 
 func (s *HttpServer) Run(ctx context.Context) error {
