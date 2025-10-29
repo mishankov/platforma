@@ -9,16 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
-// TraceIdMiddleware is a middleware that adds a trace ID to the request context and response headers.
-type TraceIdMiddleware struct {
+// TraceIDMiddleware is a middleware that adds a trace ID to the request context and response headers.
+type TraceIDMiddleware struct {
 	contextKey any
 	header     string
 }
 
-// NewTraceIdMiddleware returns a new TraceId middleware.
+// NewTraceIDMiddleware returns a new TraceID middleware.
 // If key is nil, log.TraceIdKey is used.
 // If header is empty, "Platforma-Trace-Id" is used.
-func NewTraceIdMiddleware(contextKey any, header string) *TraceIdMiddleware {
+func NewTraceIDMiddleware(contextKey any, header string) *TraceIDMiddleware {
 	if contextKey == nil {
 		contextKey = log.TraceIdKey
 	}
@@ -27,16 +27,17 @@ func NewTraceIdMiddleware(contextKey any, header string) *TraceIdMiddleware {
 		header = "Platforma-Trace-Id"
 	}
 
-	return &TraceIdMiddleware{contextKey: contextKey, header: header}
+	return &TraceIDMiddleware{contextKey: contextKey, header: header}
 }
 
-func (m *TraceIdMiddleware) Wrap(h http.Handler) http.Handler {
+// Wrap implements the Middleware interface by adding trace ID to requests.
+func (m *TraceIDMiddleware) Wrap(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		traceId := uuid.NewString()
-		ctx := context.WithValue(r.Context(), m.contextKey, traceId)
+		traceID := uuid.NewString()
+		ctx := context.WithValue(r.Context(), m.contextKey, traceID)
 		r = r.WithContext(ctx)
 
-		w.Header().Set(m.header, traceId)
+		w.Header().Set(m.header, traceID)
 
 		h.ServeHTTP(w, r)
 	})

@@ -10,7 +10,7 @@ import (
 	"github.com/mishankov/platforma/httpserver"
 )
 
-func TestHttpServer(t *testing.T) {
+func TestHTTPServer(t *testing.T) {
 	t.Parallel()
 
 	t.Run("single http.HandlerFunc endpoint", func(t *testing.T) {
@@ -18,7 +18,7 @@ func TestHttpServer(t *testing.T) {
 
 		server := httpserver.New("", 0)
 
-		server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		server.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("pong"))
 		})
 
@@ -39,7 +39,7 @@ func TestHttpServer(t *testing.T) {
 		t.Parallel()
 
 		pingHandler := &handler{
-			serveHttp: func(w http.ResponseWriter, r *http.Request) {
+			serveHTTP: func(w http.ResponseWriter, _ *http.Request) {
 				w.Write([]byte("pong"))
 			},
 		}
@@ -213,12 +213,12 @@ func TestHttpServer(t *testing.T) {
 }
 
 type handler struct {
-	serveHttp func(http.ResponseWriter, *http.Request)
+	serveHTTP func(http.ResponseWriter, *http.Request)
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if h.serveHttp != nil {
-		h.serveHttp(w, r)
+	if h.serveHTTP != nil {
+		h.serveHTTP(w, r)
 		return
 	}
 

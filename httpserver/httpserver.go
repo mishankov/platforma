@@ -1,3 +1,4 @@
+// Package httpserver provides HTTP server functionality with middleware support.
 package httpserver
 
 import (
@@ -15,17 +16,20 @@ import (
 
 type handleGroup = HandlerGroup
 
-type HttpServer struct {
+// HTTPServer represents an HTTP server with middleware support and graceful shutdown.
+type HTTPServer struct {
 	*handleGroup
 	port            string
 	shutdownTimeout time.Duration
 }
 
-func New(port string, shutdownTimeout time.Duration) *HttpServer {
-	return &HttpServer{handleGroup: NewHandlerGroup(), port: port, shutdownTimeout: shutdownTimeout}
+// New creates a new HTTPServer instance with the specified port and shutdown timeout.
+func New(port string, shutdownTimeout time.Duration) *HTTPServer {
+	return &HTTPServer{handleGroup: NewHandlerGroup(), port: port, shutdownTimeout: shutdownTimeout}
 }
 
-func (s *HttpServer) Run(ctx context.Context) error {
+// Run starts the HTTP server and handles graceful shutdown on interrupt signals.
+func (s *HTTPServer) Run(ctx context.Context) error {
 	server := &http.Server{
 		Addr:              ":" + s.port,
 		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
@@ -56,7 +60,8 @@ func (s *HttpServer) Run(ctx context.Context) error {
 	return nil
 }
 
-func (s *HttpServer) Healthcheck(ctx context.Context) any {
+// Healthcheck returns health check information for the HTTP server.
+func (s *HTTPServer) Healthcheck(_ context.Context) any {
 	return map[string]any{
 		"port": s.port,
 	}

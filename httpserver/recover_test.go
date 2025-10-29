@@ -13,14 +13,14 @@ type panicHandler struct {
 	panicMessage string
 }
 
-func (h *panicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *panicHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {
 	panic(h.panicMessage)
 }
 
 // normalHandler is a test handler that returns success
 type normalHandler struct{}
 
-func (h *normalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *normalHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Success"))
 }

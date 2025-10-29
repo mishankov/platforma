@@ -31,7 +31,7 @@ func main() {
 	})
 
 	// Add middleware to HTTP server. It will add trace ID to logs and responce headers
-	api.Use(httpserver.NewTraceIdMiddleware(nil, ""))
+	api.Use(httpserver.NewTraceIDMiddleware(nil, ""))
 
 	// Create handler group
 	subApiGroup := httpserver.NewHandlerGroup()
