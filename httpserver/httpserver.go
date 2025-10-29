@@ -47,7 +47,7 @@ func (s *HttpServer) UseFunc(middlewareFuncs ...func(http.Handler) http.Handler)
 }
 
 func (s *HttpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
+	wrapHandlerInMiddleware(s.mux, s.middlewares).ServeHTTP(w, r)
 }
 
 func (s *HttpServer) Run(ctx context.Context) error {
