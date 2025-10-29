@@ -27,18 +27,17 @@ func (hg *HandlerGroup) UseFunc(middlewareFuncs ...func(http.Handler) http.Handl
 	}
 }
 
-// Handle registers an http.Handler for the given pattern, applying all
-// middlewares in the HandlerGroup's chain.
+// Handle registers an http.Handler for the given pattern
 func (hg *HandlerGroup) Handle(pattern string, handler http.Handler) {
 	hg.mux.Handle(pattern, handler)
 }
 
-// HandleFunc registers an http.HandlerFunc for the given pattern, applying all
-// middlewares in the HandlerGroup's chain.
+// HandleFunc registers an http.HandlerFunc for the given pattern
 func (hg *HandlerGroup) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	hg.mux.Handle(pattern, http.HandlerFunc(handler))
 }
 
+// HandleGroup applies `http.StripPrefix` to http.Handler and registers it for the given pattern
 func (hg *HandlerGroup) HandleGroup(pattern string, handler http.Handler) {
 	hg.mux.Handle(pattern+"/", http.StripPrefix(pattern, handler))
 }
