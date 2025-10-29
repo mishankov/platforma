@@ -39,6 +39,10 @@ func (hg *HandlerGroup) HandleFunc(pattern string, handler func(http.ResponseWri
 	hg.mux.Handle(pattern, http.HandlerFunc(handler))
 }
 
+func (hg *HandlerGroup) HandleGroup(pattern string, handler http.Handler) {
+	hg.mux.Handle(pattern+"/", http.StripPrefix(pattern, handler))
+}
+
 // ServeHTTP implements the http.Handler interface, allowing HandlerGroup to
 // be used as an HTTP handler itself.
 func (hg *HandlerGroup) ServeHTTP(w http.ResponseWriter, r *http.Request) {
