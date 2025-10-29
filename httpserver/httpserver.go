@@ -46,6 +46,10 @@ func (s *HttpServer) UseFunc(middlewareFuncs ...func(http.Handler) http.Handler)
 	}
 }
 
+func (s *HttpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.mux.ServeHTTP(w, r)
+}
+
 func (s *HttpServer) Run(ctx context.Context) error {
 	server := &http.Server{
 		Addr:              ":" + s.port,
