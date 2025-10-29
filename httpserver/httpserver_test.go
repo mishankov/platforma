@@ -1,6 +1,7 @@
 package httpserver_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -59,6 +60,16 @@ func TestHttpServer(t *testing.T) {
 			t.Errorf("expected body to be 'pong', got %s", string(body))
 		}
 	})
+
+	t.Run("healthcheck", func(t *testing.T) {
+		t.Parallel()
+
+		server := httpserver.New("8080", 0)
+		port := server.Healthcheck(context.TODO()).(map[string]any)["port"]
+		if port != "8080" {
+			t.Errorf("expected port to be 8080, got %s", port)
+		}
+	})
 }
 
 type handler struct {
@@ -66,5 +77,10 @@ type handler struct {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.serveHttp(w, r)
+	if h.serveHttp != nil {
+		h.serveHttp(w, r)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
