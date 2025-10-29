@@ -24,7 +24,13 @@ func main() {
 		w.Write([]byte("pong"))
 	})
 
-	// Add middleware to `api`. It will add trace ID to logs and responce headers
+	// Add /long endpoint to HTTP server to test graceful shutdown
+	api.HandleFunc("/long", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Second)
+		w.Write([]byte("pong"))
+	})
+
+	// Add middleware to HTTP server. It will add trace ID to logs and responce headers
 	api.Use(httpserver.NewTraceIdMiddleware(nil, ""))
 
 	// Create handler group
@@ -35,7 +41,7 @@ func main() {
 		w.Write([]byte(time.Now().String()))
 	})
 
-	// Add middleware to `api`. It will log all incoming requests to this handle group
+	// Add middleware to HTTP server. It will log all incoming requests to this handle group
 	subApiGroup.UseFunc(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.InfoContext(r.Context(), "incoming request", "addr", r.RemoteAddr)
@@ -46,7 +52,7 @@ func main() {
 	// Add handle group to HTTP server with /subApi path
 	api.HandleGroup("/subApi", subApiGroup)
 
-	// Register http server as application server
+	// Register HTTP server as application server
 	app.RegisterService("api", api)
 
 	// Run application
@@ -54,5 +60,6 @@ func main() {
 		log.ErrorContext(ctx, "app finished with error", "error", err)
 	}
 
-	// Now you can access http://localhost:8080/ping and http://localhost:8080/subApi/clock URLs with GET method
+	// Now you can access http://localhost:8080/ping, http://localhost:8080/long
+	// and http://localhost:8080/subApi/clock URLs with GET method
 }
