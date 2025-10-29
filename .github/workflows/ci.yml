@@ -25,6 +25,22 @@ jobs:
         with:
           version: v2.5
 
+  build-demo:
+    name: build demo apps
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: [ubuntu, windows, macsos]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Test
+        run: go build ./demo-app/cmd/...
+
   test:
     runs-on: ${{ matrix.os }}-latest
     strategy:
