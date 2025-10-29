@@ -70,8 +70,7 @@ func (s *HttpServer) Run(ctx context.Context) error {
 	defer shutdownRelease()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.ErrorContext(ctx, "HTTP shutdown error", "error", err)
-		return fmt.Errorf("failed to shutdown server: %w", err)
+		return fmt.Errorf("failed to gracefully shutdown HTTP server: %w", err)
 	}
 	log.InfoContext(ctx, "graceful shutdown completed.")
 
