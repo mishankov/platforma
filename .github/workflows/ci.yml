@@ -39,7 +39,9 @@ jobs:
           go-version: stable
 
       - name: Test
-        run: go test -v -coverprofile="coverage.txt" ./...
+        run: |
+          go test -v -coverprofile="coverage.tmp.txt" ./...
+          cat coverage.tmp.txt | grep -v "demo-app" > coverage.txt
 
       - name: Upload coverage reports to Codecov
         # upload coverage reports only once
