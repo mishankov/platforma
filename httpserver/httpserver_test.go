@@ -61,6 +61,27 @@ func TestHttpServer(t *testing.T) {
 		}
 	})
 
+	t.Run("handle group", func(t *testing.T) {
+		t.Parallel()
+
+		hg := httpserver.NewHandlerGroup()
+		hg.Handle("/test", &handler{})
+
+		server := httpserver.New("", 0)
+		server.HandleGroup("/hg", hg)
+
+		r := httptest.NewRequest(http.MethodGet, "/hg/test", nil)
+		w := httptest.NewRecorder()
+
+		server.ServeHTTP(w, r)
+
+		resp := w.Result()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status code to be 200, got %d", resp.StatusCode)
+		}
+	})
+
 	t.Run("healthcheck", func(t *testing.T) {
 		t.Parallel()
 
@@ -76,7 +97,7 @@ func TestHttpServer(t *testing.T) {
 		}
 	})
 
-	t.Run("Use middleware", func(t *testing.T) {
+	t.Run("use", func(t *testing.T) {
 		t.Parallel()
 
 		server := httpserver.New("", 0)
@@ -107,7 +128,7 @@ func TestHttpServer(t *testing.T) {
 		}
 	})
 
-	t.Run("UseFunc middleware", func(t *testing.T) {
+	t.Run("use func", func(t *testing.T) {
 		t.Parallel()
 
 		server := httpserver.New("", 0)
