@@ -6,9 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/mishankov/platforma/log"
@@ -42,20 +39,19 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.ErrorContext(ctx, "HTTP server error", "error", err)
 		}
-		log.InfoContext(ctx, "stopped serving new connections.")
+		log.InfoContext(ctx, "stopped serving new connections")
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	<-ctx.Done()
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(ctx, s.shutdownTimeout)
-	defer shutdownRelease()
+	shutdownCtx := context.Background()
+	shutdownCtx, cancel := context.WithTimeout(shutdownCtx, s.shutdownTimeout)
+	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to gracefully shutdown HTTP server: %w", err)
 	}
-	log.InfoContext(ctx, "graceful shutdown completed.")
+	log.InfoContext(ctx, "graceful shutdown completed")
 
 	return nil
 }

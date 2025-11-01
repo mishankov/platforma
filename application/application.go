@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -91,6 +93,9 @@ func (a *Application) Run(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
+	defer cancel()
 
 	log.InfoContext(ctx, "starting application", "startupTasks", len(a.startupTasks))
 
