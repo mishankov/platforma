@@ -1,0 +1,56 @@
+---
+title: Getting started
+description: Installation and first application
+---
+
+`platforma` is a framework for building backend applications with Golang. It's has several packages like [`httpserver`](/packages/httpserver) and [`database`](/packages/database) that provides solid foundation which you can build on top of.
+
+## Installation
+
+```shell
+go get -u github.com/mishankov/platforma@latest
+```
+
+## First application
+
+```go
+//main.go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/mishankov/platforma/application"
+	"github.com/mishankov/platforma/log"
+)
+
+type Clock struct{}
+
+func (r *Clock) Run(ctx context.Context) error {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			log.InfoContext(ctx, "tick")
+		case <-ctx.Done():
+			log.InfoContext(ctx, "finished")
+			return fmt.Errorf("context error: %w", ctx.Err())
+		}
+	}
+}
+
+func main() {
+	ctx := context.Background()
+	app := application.New()
+
+	app.RegisterService("clock", &Clock{})
+
+	if err := app.Run(ctx); err != nil {
+		log.ErrorContext(ctx, "app finished with error", "error", err)
+	}
+}
+```
