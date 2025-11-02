@@ -29,6 +29,7 @@ func New(connection string) (*Database, error) {
 	return &Database{conn: db, repositories: make(map[string]any), migrators: make(map[string]migrator), service: service}, nil
 }
 
+// Connection returns the underlying sqlx database connection.
 func (db *Database) Connection() *sqlx.DB {
 	return db.conn
 }
