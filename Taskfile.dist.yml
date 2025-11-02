@@ -14,6 +14,7 @@ tasks:
       - go test -cover ./...
 
   check:
-    deps:
-      - lint
-      - test
+    # Using cmds here intead of deps beacuse deps run in parallel which messes up output
+    cmds:
+      - task lint
+      - task test
