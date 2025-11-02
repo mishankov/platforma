@@ -11,7 +11,7 @@ import (
 
 // Database represents a database connection with migration capabilities.
 type Database struct {
-	*sqlx.DB
+	conn         *sqlx.DB
 	repositories map[string]any
 	migrators    map[string]migrator
 	service      *service
@@ -26,7 +26,12 @@ func New(connection string) (*Database, error) {
 
 	repository := newRepository(db)
 	service := newService(repository)
-	return &Database{DB: db, repositories: make(map[string]any), migrators: make(map[string]migrator), service: service}, nil
+	return &Database{conn: db, repositories: make(map[string]any), migrators: make(map[string]migrator), service: service}, nil
+}
+
+// Connection returns the underlying sqlx database connection.
+func (db *Database) Connection() *sqlx.DB {
+	return db.conn
 }
 
 // RegisterRepository registers a repository in the database.
