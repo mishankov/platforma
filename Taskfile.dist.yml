@@ -18,3 +18,8 @@ tasks:
     cmds:
       - task lint
       - task test
+
+  docs:
+    dir: docs
+    cmds:
+      - npm run dev
