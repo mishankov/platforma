@@ -42,7 +42,7 @@ func (m *AuthenticationMiddleware) Wrap(next http.Handler) http.Handler {
 
 		newRequest := r
 		if user != nil {
-			ctxWithUserId := context.WithValue(r.Context(), log.UserIdKey, user.ID)
+			ctxWithUserId := context.WithValue(r.Context(), log.UserIDKey, user.ID)
 			ctxWithUser := context.WithValue(ctxWithUserId, UserContextKey, user)
 			newRequest = r.WithContext(ctxWithUser)
 		}

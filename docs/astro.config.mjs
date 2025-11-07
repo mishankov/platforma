@@ -20,7 +20,7 @@ export default defineConfig({
         },
         {
           label: "Packages",
-          items: ["packages/database", "packages/httpserver"],
+          items: ["packages/database", "packages/httpserver", "packages/log"],
         },
       ],
     }),
