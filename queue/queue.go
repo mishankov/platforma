@@ -8,20 +8,27 @@ import (
 	"github.com/platforma-dev/platforma/log"
 )
 
-type queueHandler[T any] interface {
+type Handler[T any] interface {
 	Handle(ctx context.Context, job T)
+}
+
+type HandlerFunc[T any] func(ctx context.Context, job T)
+
+func (f HandlerFunc[T]) Handle(ctx context.Context, job T) {
+	f(ctx, job)
 }
 
 type Queue[T any] struct {
 	jobChan         chan T
-	handler         queueHandler[T]
+	handler         Handler[T]
 	wg              sync.WaitGroup
 	workersAmount   int
+	bufferSize      int
 	shutdownTimeout time.Duration
 }
 
-func New[T any](handler queueHandler[T], workersAmount int, shutdownTimeout time.Duration) *Queue[T] {
-	return &Queue[T]{jobChan: make(chan T), handler: handler, workersAmount: workersAmount, shutdownTimeout: shutdownTimeout}
+func New[T any](handler Handler[T], workersAmount, bufferSize int, shutdownTimeout time.Duration) *Queue[T] {
+	return &Queue[T]{jobChan: make(chan T, bufferSize), handler: handler, workersAmount: workersAmount, shutdownTimeout: shutdownTimeout}
 }
 
 func (q *Queue[T]) Enqueue(job T) {
