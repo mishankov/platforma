@@ -1,3 +1,4 @@
+// Package log provides structured logging functionality with context support.
 package log
 
 import (
@@ -20,6 +21,7 @@ type logger interface {
 	ErrorContext(ctx context.Context, msg string, args ...any)
 }
 
+// Logger is the default logger instance used by package-level logging functions.
 var Logger logger = New(os.Stdout, "text", slog.LevelInfo, nil) //nolint:gochecknoglobals
 
 // SetDefault sets the default logger used by the package-level logging functions.
@@ -30,11 +32,16 @@ func SetDefault(l logger) {
 type contextKey string
 
 const (
-	DomainNameKey  contextKey = "domainName"
-	TraceIdKey     contextKey = "traceId"
+	// DomainNameKey is the context key for domain name.
+	DomainNameKey contextKey = "domainName"
+	// TraceIDKey is the context key for trace ID.
+	TraceIDKey contextKey = "traceId"
+	// ServiceNameKey is the context key for service name.
 	ServiceNameKey contextKey = "serviceName"
+	// StartupTaskKey is the context key for startup task.
 	StartupTaskKey contextKey = "startupTask"
-	UserIdKey      contextKey = "userId"
+	// UserIDKey is the context key for user ID.
+	UserIDKey contextKey = "userId"
 )
 
 type contextHandler struct {
@@ -46,10 +53,10 @@ type contextHandler struct {
 func (h *contextHandler) Handle(ctx context.Context, r slog.Record) error {
 	var defaultKeys = []contextKey{
 		DomainNameKey,
-		TraceIdKey,
+		TraceIDKey,
 		ServiceNameKey,
 		StartupTaskKey,
-		UserIdKey,
+		UserIDKey,
 	}
 
 	for _, key := range defaultKeys {
