@@ -61,6 +61,7 @@ func (q *Queue[T]) worker(ctx context.Context, id int) {
 		}
 
 		if breakLoop {
+			log.InfoContext(ctx, "shutting down worker")
 			break
 		}
 	}
