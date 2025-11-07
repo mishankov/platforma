@@ -10,10 +10,9 @@ import (
 // FileServer represents an HTTP file server for serving static files.
 type FileServer struct {
 	server *HTTPServer
-	port   string
 }
 
-// New creates a new FileServer instance with the given file system, base path, and port.
+// NewFileServer creates a new FileServer instance with the given file system, base path, and port.
 func NewFileServer(fs fs.FS, basePath, port string) *FileServer {
 	server := New(port, 1*time.Second)
 	server.HandleGroup(basePath, http.FileServer(http.FS(fs)))
