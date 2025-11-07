@@ -13,7 +13,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/mishankov/platforma",
+          href: "https://github.com/platforma-dev/platforma",
         },
       ],
       sidebar: [

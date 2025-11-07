@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mishankov/platforma/database"
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/database"
+	"github.com/platforma-dev/platforma/log"
 )
 
 // ErrDatabaseMigrationFailed is an error type that represents a failed database migration.

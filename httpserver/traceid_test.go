@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mishankov/platforma/httpserver"
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/httpserver"
+	"github.com/platforma-dev/platforma/log"
 )
 
 func TestTraceIdMiddleware(t *testing.T) {

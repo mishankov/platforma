@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mishankov/platforma/auth"
+	"github.com/platforma-dev/platforma/auth"
 )
 
 func TestAuthenticationMiddleware_ValidSession(t *testing.T) {

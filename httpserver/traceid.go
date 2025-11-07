@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 
 	"github.com/google/uuid"
 )

@@ -3,7 +3,7 @@ package cli
 import (
 	"runtime/debug"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 )
 
 func versionCommand() {

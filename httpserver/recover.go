@@ -3,7 +3,7 @@ package httpserver
 import (
 	"net/http"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 )
 
 // RecoverMiddleware is a middleware that recovers from panics in HTTP handlers.

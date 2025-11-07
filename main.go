@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/mishankov/platforma/internal/cli"
+	"github.com/platforma-dev/platforma/internal/cli"
 )
 
 func main() {

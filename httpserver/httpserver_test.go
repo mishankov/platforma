@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mishankov/platforma/httpserver"
+	"github.com/platforma-dev/platforma/httpserver"
 )
 
 func TestHTTPServer(t *testing.T) {

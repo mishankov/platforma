@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mishankov/platforma/application"
-	"github.com/mishankov/platforma/httpserver"
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/application"
+	"github.com/platforma-dev/platforma/httpserver"
+	"github.com/platforma-dev/platforma/log"
 )
 
 func main() {

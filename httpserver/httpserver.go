@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 )
 
 type handleGroup = HandlerGroup

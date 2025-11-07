@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/mishankov/platforma/database"
+	"github.com/platforma-dev/platforma/database"
 )
 
 type db interface {

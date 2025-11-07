@@ -7,7 +7,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 )
 
 type service struct {

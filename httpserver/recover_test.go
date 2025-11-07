@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mishankov/platforma/httpserver"
+	"github.com/platforma-dev/platforma/httpserver"
 )
 
 // panicHandler is a test handler that panics with a specific message

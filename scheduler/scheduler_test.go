@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mishankov/platforma/application"
-	"github.com/mishankov/platforma/scheduler"
+	"github.com/platforma-dev/platforma/application"
+	"github.com/platforma-dev/platforma/scheduler"
 )
 
 func TestSuccessRun(t *testing.T) {

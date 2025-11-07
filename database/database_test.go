@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mishankov/platforma/database"
+	"github.com/platforma-dev/platforma/database"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 

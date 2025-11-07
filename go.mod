@@ -1,4 +1,4 @@
-module github.com/mishankov/platforma
+module github.com/platforma-dev/platforma
 
 go 1.25.0
 

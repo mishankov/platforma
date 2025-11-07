@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/log"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

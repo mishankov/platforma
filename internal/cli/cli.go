@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/mishankov/platforma/log"
+import "github.com/platforma-dev/platforma/log"
 
 func Run(args []string) {
 	command := args[1]
