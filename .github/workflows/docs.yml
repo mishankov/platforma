@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - ".github/workflows/docs.yml"
   pull_request:
     branches: [main]
     paths:
       - "docs/**"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 # Allow this job to clone the repo and create a page deployment
@@ -29,8 +31,8 @@ jobs:
           path: ./docs
 
   deploy:
-    # Deploy only on push
-    if: ${{ github.event_name == 'push' }}
+    # Deploy only on push or manual dispatch
+    if: ${{ github.event_name != 'pull_request' }}
     needs: build
     runs-on: ubuntu-latest
     environment:
