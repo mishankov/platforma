@@ -2,8 +2,10 @@ package fileserver
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
+	"time"
 )
 
 type FileServer struct {
@@ -23,8 +25,15 @@ func (s *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *FileServer) Run(ctx context.Context) error {
-	if err := http.ListenAndServe(":"+s.port, s.mux); err != nil {
-		return err
+	server := &http.Server{
+		Addr:         ":" + s.port,
+		Handler:      s.mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		return fmt.Errorf("file server failed: %w", err)
 	}
 
 	return nil
