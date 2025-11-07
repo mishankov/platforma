@@ -34,7 +34,7 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			runCtx := context.WithValue(ctx, log.TraceIdKey, uuid.NewString())
+			runCtx := context.WithValue(ctx, log.TraceIDKey, uuid.NewString())
 			log.InfoContext(runCtx, "scheduler task started")
 
 			err := s.runner.Run(runCtx)

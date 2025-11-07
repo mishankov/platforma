@@ -17,7 +17,7 @@ func TestTraceIdMiddleware(t *testing.T) {
 
 		m := httpserver.NewTraceIDMiddleware(nil, "")
 		wrappedHandler := m.Wrap(&handler{serveHTTP: func(w http.ResponseWriter, r *http.Request) {
-			i, ok := r.Context().Value(log.TraceIdKey).(string)
+			i, ok := r.Context().Value(log.TraceIDKey).(string)
 			if ok {
 				w.Header().Add("TraceIdFromContext", i)
 			}

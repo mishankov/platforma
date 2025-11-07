@@ -20,7 +20,7 @@ type TraceIDMiddleware struct {
 // If header is empty, "Platforma-Trace-Id" is used.
 func NewTraceIDMiddleware(contextKey any, header string) *TraceIDMiddleware {
 	if contextKey == nil {
-		contextKey = log.TraceIdKey
+		contextKey = log.TraceIDKey
 	}
 
 	if header == "" {
