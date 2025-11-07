@@ -24,9 +24,6 @@ jobs:
         with:
           go-version: stable
 
-      # Make file in docs build folder so embed does not fail
-      - run: mkdir docs/dist && touch docs/dist/file
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9
         with:
@@ -60,9 +57,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: stable
-
-      # Make file in docs build folder so embed does not fail
-      - run: mkdir docs/dist && touch docs/dist/file
 
       - name: Test
         run: |
