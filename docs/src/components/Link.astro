@@ -1,0 +1,5 @@
+---
+const { path, target } = Astro.props;
+---
+
+<a href={import.meta.env.BASE_URL + path} target={target}><slot /></a>
