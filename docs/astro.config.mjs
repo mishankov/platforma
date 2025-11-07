@@ -24,6 +24,9 @@ export default defineConfig({
           label: "Packages",
           items: ["packages/database", "packages/httpserver", "packages/log"],
         },
+        {
+          slug: "cli",
+        },
       ],
     }),
   ],
