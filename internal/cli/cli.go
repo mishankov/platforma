@@ -7,6 +7,8 @@ func Run(args []string) {
 	switch command {
 	case "generate":
 		generateCommand(args[2:])
+	case "docs":
+		docsCommand(args[2:])
 	default:
 		log.Error("unknown command", "command", command)
 	}
