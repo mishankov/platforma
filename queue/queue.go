@@ -23,7 +23,6 @@ type Queue[T any] struct {
 	handler         Handler[T]
 	wg              sync.WaitGroup
 	workersAmount   int
-	bufferSize      int
 	shutdownTimeout time.Duration
 }
 
