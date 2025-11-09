@@ -42,14 +42,18 @@ func (q *ChanQueue[T]) Close(ctx context.Context) error {
 }
 
 func (q *ChanQueue[T]) EnqueueJob(ctx context.Context, job T) error {
-	select {
-	case q.ch <- job:
-		return nil
-	case <-time.After(5 * time.Second):
-		return errors.New("timeout")
-	case <-ctx.Done():
-		return ctx.Err()
+	if q.opened {
+		select {
+		case q.ch <- job:
+			return nil
+		case <-time.After(5 * time.Second):
+			return errors.New("timeout")
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
+
+	return errors.New("queue is closed")
 }
 
 func (q *ChanQueue[T]) GetJobChan(ctx context.Context) (chan T, error) {
