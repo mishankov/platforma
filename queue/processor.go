@@ -68,21 +68,22 @@ func (p *QueueProcessor[T]) Run(ctx context.Context) error {
 	return nil
 }
 
-// TODO: make worker id context key in log package
 func (p *QueueProcessor[T]) worker(ctx context.Context, id int) {
 	defer p.wg.Done()
-	defer log.InfoContext(ctx, "worker finished", "workerId", id)
+	defer log.InfoContext(ctx, "worker finished")
 	defer func() {
 		if r := recover(); r != nil {
-			log.ErrorContext(ctx, "worker panic recovered", "panic", r, "workerId", id)
+			log.ErrorContext(ctx, "worker panic recovered", "panic", r)
 		}
 	}()
 
-	log.InfoContext(ctx, "worker started", "workerId", id)
+	ctx = context.WithValue(ctx, log.WorkerIDKey, id)
+
+	log.InfoContext(ctx, "worker started")
 
 	jobChan, err := p.queue.GetJobChan(ctx)
 	if err != nil {
-		log.ErrorContext(ctx, "failed to get job chan", "error", err, "workerId", id)
+		log.ErrorContext(ctx, "failed to get job chan", "error", err)
 		return
 	}
 
@@ -93,7 +94,7 @@ func (p *QueueProcessor[T]) worker(ctx context.Context, id int) {
 
 		select {
 		case <-ctx.Done():
-			log.InfoContext(ctx, "skipping job due to shutdown", "workerId", id)
+			log.InfoContext(ctx, "skipping job due to shutdown")
 			breakLoop = true
 		default:
 			select {

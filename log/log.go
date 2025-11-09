@@ -42,6 +42,8 @@ const (
 	StartupTaskKey contextKey = "startupTask"
 	// UserIDKey is the context key for user ID.
 	UserIDKey contextKey = "userId"
+	// WorkerIDKey is the context key worker of queue processor.
+	WorkerIDKey contextKey = "workerId"
 )
 
 type contextHandler struct {
@@ -57,6 +59,7 @@ func (h *contextHandler) Handle(ctx context.Context, r slog.Record) error {
 		ServiceNameKey,
 		StartupTaskKey,
 		UserIDKey,
+		WorkerIDKey,
 	}
 
 	for _, key := range defaultKeys {
