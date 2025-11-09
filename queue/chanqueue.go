@@ -3,9 +3,13 @@ package queue
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
+
+var ErrTimeout = errors.New("timeout")
+var ErrClosedQueue = errors.New("queue is closed")
 
 type ChanQueue[T any] struct {
 	ch         chan T
@@ -47,13 +51,13 @@ func (q *ChanQueue[T]) EnqueueJob(ctx context.Context, job T) error {
 		case q.ch <- job:
 			return nil
 		case <-time.After(5 * time.Second):
-			return errors.New("timeout")
+			return ErrTimeout
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context cancelled: %w", ctx.Err())
 		}
 	}
 
-	return errors.New("queue is closed")
+	return ErrClosedQueue
 }
 
 func (q *ChanQueue[T]) GetJobChan(ctx context.Context) (chan T, error) {

@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -38,15 +39,24 @@ func New[T any](handler Handler[T], queue QueueProvider[T], workersAmount int, s
 }
 
 func (p *QueueProcessor[T]) Enqueue(ctx context.Context, job T) error {
-	return p.queue.EnqueueJob(ctx, job)
+	err := p.queue.EnqueueJob(ctx, job)
+	if err != nil {
+		return fmt.Errorf("failed to enqueue job: %w", err)
+	}
+	return nil
 }
 
 func (p *QueueProcessor[T]) Run(ctx context.Context) error {
 	err := p.queue.Open(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open queue: %w", err)
 	}
-	defer p.queue.Close(ctx)
+	defer func() {
+		err := p.queue.Close(ctx)
+		if err != nil {
+			log.ErrorContext(ctx, "failed to close queue", "error", err)
+		}
+	}()
 
 	p.wg.Add(p.workersAmount)
 	for i := range p.workersAmount {
