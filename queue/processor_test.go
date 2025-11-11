@@ -14,7 +14,7 @@ func TestProcessor(t *testing.T) {
 
 	t.Run("simple queue", func(t *testing.T) {
 		t.Parallel()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx := context.Background()
 		res := 0
 
 		q := &mockQueue[job]{
