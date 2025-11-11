@@ -49,8 +49,8 @@ type job struct {
 Then we need to implement handler. We will use `HandlerFunc` helper later so it enough for us to define a functions
 
 ```go
-func jobHandler(_ context.Context, job job) {
-	log.Info("job handled", "data", job.data)
+func jobHandler(ctx context.Context, job job) {
+	log.InfoContext(ctx, "job handled", "data", job.data)
 }
 ````
 
