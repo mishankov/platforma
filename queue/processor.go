@@ -67,7 +67,7 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 
 	p.wg.Wait()
 
-	log.InfoContext(ctx, "all workers shutted down")
+	log.InfoContext(ctx, "all workers shut down")
 
 	err = p.queue.Close(ctx)
 	if err != nil {
@@ -121,7 +121,7 @@ func (p *Processor[T]) worker(ctx context.Context, id int) {
 		}
 	}
 
-	// after context is cancelled we try to drain remainning jobs from channel
+	// after context is cancelled we try to drain remaining jobs from channel
 	// before shutdown time expired
 	shutdownCtx := context.WithoutCancel(ctx)
 	shutdownCtx, cancel := context.WithTimeout(shutdownCtx, p.shutdownTimeout)

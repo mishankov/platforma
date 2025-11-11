@@ -21,12 +21,12 @@ type ChanQueue[T any] struct {
 	mu             sync.Mutex
 	opened         bool
 	bufferSize     int
-	enqueueTiemout time.Duration
+	enqueueTimeout time.Duration
 }
 
 // NewChanQueue creates a new channel-based queue with the specified buffer size and enqueue timeout.
 func NewChanQueue[T any](bufferSize int, enqueueTimeout time.Duration) *ChanQueue[T] {
-	return &ChanQueue[T]{bufferSize: bufferSize, enqueueTiemout: enqueueTimeout, opened: false}
+	return &ChanQueue[T]{bufferSize: bufferSize, enqueueTimeout: enqueueTimeout, opened: false}
 }
 
 // Open initializes the queue and makes it ready to accept jobs.
@@ -60,7 +60,7 @@ func (q *ChanQueue[T]) EnqueueJob(ctx context.Context, job T) error {
 		select {
 		case q.ch <- job:
 			return nil
-		case <-time.After(q.enqueueTiemout):
+		case <-time.After(q.enqueueTimeout):
 			return ErrTimeout
 		case <-ctx.Done():
 			return fmt.Errorf("context cancelled: %w", ctx.Err())

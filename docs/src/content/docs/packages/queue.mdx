@@ -2,7 +2,7 @@
 title: queue
 ---
 
-`queue` package provides `Processor` struct manages a pool of workers to process jobs from a queue. It accepts `Handler` interface that handles job processing and `Provider` interface that handles interation with actual queue. `ChanQueue` is implementation of `Provider` interface that uses golang channels.
+`queue` package provides `Processor` struct manages a pool of workers to process jobs from a queue. It accepts `Handler` interface that handles job processing and `Provider` interface that handles interactions with actual queue. `ChanQueue` is implementation of `Provider` interface that uses golang channels.
 
 `Processor` implements `Runner` interface so it can be used as an `application` service.
 
