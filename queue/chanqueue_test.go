@@ -2,6 +2,7 @@ package queue_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -39,6 +40,24 @@ func TestChanQueue(t *testing.T) {
 			}
 		default:
 			t.Fatalf("expected job to be received from channel")
+		}
+	})
+
+	t.Run("enqueue timeout", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		q := queue.NewChanQueue[job](0, time.Second)
+
+		err := q.Open(ctx)
+		if err != nil {
+			t.Fatalf("expected no error, got: %s", err.Error())
+		}
+		defer q.Close(ctx)
+
+		err = q.EnqueueJob(ctx, job{data: 1})
+		if !errors.Is(err, queue.ErrTimeout) {
+			t.Fatalf("expected timeout error, got: %s", err.Error())
 		}
 	})
 
