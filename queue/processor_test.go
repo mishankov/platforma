@@ -21,7 +21,7 @@ func TestProcessor(t *testing.T) {
 			jobChan: make(chan job, 10),
 		}
 
-		p := queue.New(queue.HandlerFunc[job](func(ctx context.Context, job job) {
+		p := queue.New(queue.HandlerFunc[job](func(_ context.Context, job job) {
 			res += job.data
 		}), q, 4, time.Microsecond)
 
@@ -46,10 +46,10 @@ func TestProcessor(t *testing.T) {
 		var someErr = errors.New("some error")
 		q := &mockQueue[job]{
 			jobChan:    make(chan job, 10),
-			enqueueJob: func(ctx context.Context, job job) error { return someErr },
+			enqueueJob: func(_ context.Context, _ job) error { return someErr },
 		}
 
-		p := queue.New(queue.HandlerFunc[job](func(ctx context.Context, job job) {
+		p := queue.New(queue.HandlerFunc[job](func(_ context.Context, job job) {
 			res += job.data
 		}), q, 4, time.Microsecond)
 
@@ -72,10 +72,10 @@ func TestProcessor(t *testing.T) {
 			var someErr = errors.New("some error")
 			q := &mockQueue[job]{
 				jobChan: make(chan job, 10),
-				open:    func(ctx context.Context) error { return someErr },
+				open:    func(_ context.Context) error { return someErr },
 			}
 
-			p := queue.New(queue.HandlerFunc[job](func(ctx context.Context, job job) {
+			p := queue.New(queue.HandlerFunc[job](func(_ context.Context, job job) {
 				res += job.data
 			}), q, 4, time.Microsecond)
 
@@ -93,10 +93,10 @@ func TestProcessor(t *testing.T) {
 			var someErr = errors.New("some error")
 			q := &mockQueue[job]{
 				jobChan: make(chan job, 10),
-				close:   func(ctx context.Context) error { return someErr },
+				close:   func(_ context.Context) error { return someErr },
 			}
 
-			p := queue.New(queue.HandlerFunc[job](func(ctx context.Context, job job) {
+			p := queue.New(queue.HandlerFunc[job](func(_ context.Context, job job) {
 				res += job.data
 			}), q, 4, time.Microsecond)
 
@@ -149,6 +149,6 @@ func (q *mockQueue[T]) EnqueueJob(ctx context.Context, job T) error {
 	return nil
 }
 
-func (q *mockQueue[T]) GetJobChan(ctx context.Context) (chan T, error) {
+func (q *mockQueue[T]) GetJobChan(_ context.Context) (chan T, error) {
 	return q.jobChan, nil
 }
