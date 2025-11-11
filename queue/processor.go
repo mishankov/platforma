@@ -51,12 +51,6 @@ func (p *QueueProcessor[T]) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open queue: %w", err)
 	}
-	defer func() {
-		err := p.queue.Close(ctx)
-		if err != nil {
-			log.ErrorContext(ctx, "failed to close queue", "error", err)
-		}
-	}()
 
 	p.wg.Add(p.workersAmount)
 	for i := range p.workersAmount {
@@ -64,6 +58,13 @@ func (p *QueueProcessor[T]) Run(ctx context.Context) error {
 	}
 
 	p.wg.Wait()
+
+	log.InfoContext(ctx, "all workers shutted down")
+
+	err = p.queue.Close(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to close queue: %w", err)
+	}
 
 	return nil
 }
