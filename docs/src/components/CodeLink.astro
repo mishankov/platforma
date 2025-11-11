@@ -1,0 +1,8 @@
+---
+import Link from "./Link.astro";
+import Code from "./Code.astro";
+
+const { path, target } = Astro.props;
+---
+
+<Code><Link path={path} target={target}>{path}<slot /></Link></Code>
