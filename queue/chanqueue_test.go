@@ -9,7 +9,10 @@ import (
 )
 
 func TestChanQueue(t *testing.T) {
+	t.Parallel()
 	t.Run("simple enqueue", func(t *testing.T) {
+		t.Parallel()
+
 		ctx := context.Background()
 		q := queue.NewChanQueue[job](3, time.Second)
 
