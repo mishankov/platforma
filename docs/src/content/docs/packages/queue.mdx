@@ -1,98 +1,77 @@
 ---
 title: queue
 ---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
 
-`queue` package provides `Processor` struct manages a pool of workers to process jobs from a queue. It accepts `Handler` interface that handles job processing and `Provider` interface that handles interactions with actual queue. `ChanQueue` is implementation of `Provider` interface that uses golang channels.
+The `queue` package provides a generic, concurrent job processing system with a channel-based queue implementation.
 
-`Processor` implements `Runner` interface so it can be used as an `application` service.
+Core Components:
 
-## Important types
+- `Processor`: Manages worker pool and coordinates job processing lifecycle. Implements `Runner` interface so it can be used as an `application` service.
+- `Handler`: Interface for defining job processing logic
+- `Provider`: Interface for custom queue storage implementations
+- `ChanQueue`: Built-in channel-based queue implementation
 
-### `Handler` and `HandlerFunc`
-```go
-// Handler defines the interface for processing jobs.
-type Handler[T any] interface {
-	Handle(ctx context.Context, job T)
-}
+## Step-by-step guide
 
-// HandlerFunc is an adapter to allow the use of ordinary functions as Handlers.
-type HandlerFunc[T any] func(ctx context.Context, job T)
+<Steps>
 
-// Handle calls f(ctx, job).
-func (f HandlerFunc[T]) Handle(ctx context.Context, job T) {
-	f(ctx, job)
-}
-```
+1. To use `Processor` first you need to define job type
 
-### `Provider`
+    ```go
+    type job struct {
+        data int
+    }
+    ```
 
-```go
-// Provider defines the interface for queue implementations.
-type Provider[T any] interface {
-	Open(ctx context.Context) error
-	Close(ctx context.Context) error
-	EnqueueJob(ctx context.Context, job T) error
-	GetJobChan(ctx context.Context) (chan T, error)
-}
-```
+2. Then we need to implement handler. We will use `HandlerFunc` helper later so it enough for us to define a functions
 
-## How-to
+    ```go
+    func jobHandler(ctx context.Context, job job) {
+    	log.InfoContext(ctx, "job handled", "data", job.data)
+    }
+    ````
 
-To use `Processor` first you need to define job type
+3. Then create new instance of `ChanQueue`
 
-```go
-type job struct {
-    data int
-}
-```
+    ```go
+    q := queue.NewChanQueue[job](10, 3 * time.Second)
+    ```
 
-Then we need to implement handler. We will use `HandlerFunc` helper later so it enough for us to define a functions
+    There we set channel buffer size to 10 and timeout to enqueue new jobs to 3 seconds. You should probably tweak those values to your needs.
 
-```go
-func jobHandler(ctx context.Context, job job) {
-	log.InfoContext(ctx, "job handled", "data", job.data)
-}
-````
+4. Then let's create new `Processor`
 
-Then create new instance of `ChanQueue`
+    ```go
+    p := queue.New(queue.HandlerFunc[job](jobHandler), q, 2, time.Second)
+    ```
+    Besides handler and queue we set amount of workers and shutdown timeout to 1 second. `Processor` would use this time to drain jobs from queue after context cancellation.
 
-```go
-q := queue.NewChanQueue[job](10, 3 * time.Second)
-```
+5. We are ready to start our processor and enqueue some jobs in it
 
-There we set channel buffer size to 10 and timeout to enqueue new jobs to 3 seconds. You should probably tweak those values to your needs.
+    ```go
+    ctx := context.Background()
 
-Then let's create new `Processor`
+    go p.Run(ctx)
+    time.Sleep(time.Millisecond)
 
-```go
-p := queue.New(queue.HandlerFunc[job](jobHandler), q, 2, time.Second)
-```
-Besides handler and queue we set amount of workers and shutdown timeout to 1 second. `Processor` would use this time to drain jobs from queue after context cancellation.
+    p.Enqueue(ctx, job{data: 1})
+    p.Enqueue(ctx, job{data: 2})
+    p.Enqueue(ctx, job{data: 3})
 
-We are ready to start our processor and enqueue some jobs in it
+    time.Sleep(time.Millisecond)
+    ```
 
-```go
-ctx := context.Background()
+6. Run this code and you will see output like this
 
-go p.Run(ctx)
-time.Sleep(time.Millisecond)
-
-p.Enqueue(ctx, job{data: 1})
-p.Enqueue(ctx, job{data: 2})
-p.Enqueue(ctx, job{data: 3})
-
-time.Sleep(time.Millisecond)
-```
-
-Run this code and you will see output like this
-
-```
-time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
-time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
-time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=1
-time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=3
-time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=2
-```
+    ```
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
+    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=1
+    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=3
+    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=2
+    ```
+</Steps>
 
 ### Full code
 
