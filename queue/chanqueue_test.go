@@ -85,4 +85,16 @@ func TestChanQueue(t *testing.T) {
 		}
 	})
 
+	t.Run("enqueue to closed queue", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		q := queue.NewChanQueue[job](0, time.Second)
+
+		err := q.EnqueueJob(ctx, job{data: 1})
+		if !errors.Is(err, queue.ErrClosedQueue) {
+			t.Fatalf("expected closed queue error, got: %s", err.Error())
+		}
+	})
+
 }
