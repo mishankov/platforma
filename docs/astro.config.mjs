@@ -22,7 +22,12 @@ export default defineConfig({
         },
         {
           label: "Packages",
-          items: ["packages/database", "packages/httpserver", "packages/log"],
+          items: [
+            "packages/database",
+            "packages/httpserver",
+            "packages/log",
+            "packages/queue",
+          ],
         },
         {
           slug: "cli",
