@@ -65,7 +65,11 @@ linters:
       - demo-app
 
     rules:
-      - path-except: "./(database|fileserver|httpserver|log|queue)/*"
+      # - path-except: "./(database|fileserver|httpserver|log|queue)/*"
+      #   linters:
+      #     - revive
+
+      - path: "(scheduler|internal|session|auth|application|doc)/*"
         linters:
           - revive
 
