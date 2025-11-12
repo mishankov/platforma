@@ -63,10 +63,9 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 
 	p.wg.Add(p.workersAmount)
 	for range p.workersAmount {
-		workerId := uuid.NewString()
-		workerCtx := context.WithValue(ctx, log.WorkerIDKey, workerId)
+		workerCtx := context.WithValue(ctx, log.WorkerIDKey, uuid.NewString())
 
-		go p.worker(workerCtx, workerId)
+		go p.worker(workerCtx)
 	}
 
 	p.wg.Wait()
@@ -81,7 +80,7 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Processor[T]) worker(ctx context.Context, id string) {
+func (p *Processor[T]) worker(ctx context.Context) {
 	defer p.wg.Done()
 	defer log.InfoContext(ctx, "worker finished")
 	defer func() {

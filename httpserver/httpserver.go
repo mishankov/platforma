@@ -32,7 +32,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		Addr:              ":" + s.port,
 		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
 		ReadHeaderTimeout: 1 * time.Second,
-		BaseContext:       func(l net.Listener) context.Context { return ctx },
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 	}
 
 	go func() {
