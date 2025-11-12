@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/platforma-dev/platforma/log"
 )
 
@@ -61,8 +62,8 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 	}
 
 	p.wg.Add(p.workersAmount)
-	for i := range p.workersAmount {
-		go p.worker(ctx, i)
+	for range p.workersAmount {
+		go p.worker(ctx, uuid.NewString())
 	}
 
 	p.wg.Wait()
@@ -77,7 +78,7 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Processor[T]) worker(ctx context.Context, id int) {
+func (p *Processor[T]) worker(ctx context.Context, id string) {
 	defer p.wg.Done()
 	defer log.InfoContext(ctx, "worker finished")
 	defer func() {
