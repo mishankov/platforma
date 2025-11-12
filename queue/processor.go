@@ -63,7 +63,10 @@ func (p *Processor[T]) Run(ctx context.Context) error {
 
 	p.wg.Add(p.workersAmount)
 	for range p.workersAmount {
-		go p.worker(ctx, uuid.NewString())
+		workerId := uuid.NewString()
+		workerCtx := context.WithValue(ctx, log.WorkerIDKey, workerId)
+
+		go p.worker(workerCtx, workerId)
 	}
 
 	p.wg.Wait()
@@ -86,8 +89,6 @@ func (p *Processor[T]) worker(ctx context.Context, id string) {
 			log.ErrorContext(ctx, "worker panic recovered", "panic", r)
 		}
 	}()
-
-	ctx = context.WithValue(ctx, log.WorkerIDKey, id)
 
 	log.InfoContext(ctx, "worker started")
 
