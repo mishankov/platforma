@@ -134,17 +134,17 @@ func (a *Application) Run(ctx context.Context) error {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					log.ErrorContext(serviceCtx, "service panicked", "service", serviceName, "panic", r)
+					log.ErrorContext(serviceCtx, "service panicked", string(log.ServiceNameKey), serviceName, "panic", r)
 				}
 			}()
 
-			log.InfoContext(ctx, "starting service", "service", serviceName)
+			log.InfoContext(ctx, "starting service", string(log.ServiceNameKey), serviceName)
 			a.health.StartService(serviceName)
 
 			err := service.Run(serviceCtx)
 			if err != nil {
 				a.health.FailService(serviceName, err)
-				log.ErrorContext(ctx, "error in service", "service", serviceName, "error", err)
+				log.ErrorContext(ctx, "error in service", string(log.ServiceNameKey), serviceName, "error", err)
 			}
 		}()
 	}

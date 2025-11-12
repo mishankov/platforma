@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -31,6 +32,7 @@ func (s *HTTPServer) Run(ctx context.Context) error {
 		Addr:              ":" + s.port,
 		Handler:           wrapHandlerInMiddleware(s.mux, s.middlewares),
 		ReadHeaderTimeout: 1 * time.Second,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 	}
 
 	go func() {
