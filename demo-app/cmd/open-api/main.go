@@ -53,7 +53,9 @@ func main() {
 		}{},
 	}
 
-	openapiserver.Get(router, resps, "/hello", func(w myRespWriter, r *myRequest) {
+	helloGroup := openapiserver.NewGroup(router, "")
+
+	openapiserver.Get(helloGroup, resps, "/hello", func(w myRespWriter, r *myRequest) {
 		w.Headers.XMen = r.Query.Name
 		w.Headers.ContentType = "application/json"
 
@@ -66,6 +68,8 @@ func main() {
 
 		w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Query.Name}})
 	})
+
+	router.OpenAPI()
 
 	http.ListenAndServe(":8080", router)
 }
