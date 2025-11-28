@@ -53,10 +53,10 @@ type ResponseWriter[Headers, Body any] struct {
 	StatusCode int
 	Headers    Headers
 	bodySet    bool
-	body       Body
+	body       any
 }
 
-func (w *ResponseWriter[Headers, Body]) SetBody(b Body) {
+func (w *ResponseWriter[Headers, Body]) SetBody(b any) {
 	w.body = b
 	w.bodySet = true
 }

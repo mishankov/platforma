@@ -52,6 +52,13 @@ func main() {
 		w.Headers.XMen = r.Query.Name
 		w.Headers.ContentType = "application/json"
 
+		if r.Query.Name[0] == "xavier" {
+			w.StatusCode = http.StatusBadRequest
+			w.SetBody(errorResp{ErrorMessage: "banned superhero"})
+
+			return
+		}
+
 		w.SetBody(myRespBody{Data: r.Query.Name})
 	})
 
