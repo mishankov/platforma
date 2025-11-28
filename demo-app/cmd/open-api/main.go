@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	httpserverv2 "github.com/platforma-dev/platforma/httpserver-v2"
+	"github.com/platforma-dev/platforma/openapiserver"
 )
 
 type myQuery struct {
@@ -32,11 +32,11 @@ type myRespBody struct {
 	successRespBody
 }
 
-type myRequest = httpserverv2.Request[myQuery, myReqHeaders, any]
-type myRespWriter = *httpserverv2.ResponseWriter[myRespHeaders, myRespBody]
+type myRequest = openapiserver.Request[myQuery, myReqHeaders, any]
+type myRespWriter = *openapiserver.ResponseWriter[myRespHeaders, myRespBody]
 
 func main() {
-	router := httpserverv2.NewRouter("/docs/openapi.yml", "/docs")
+	router := openapiserver.NewRouter("/docs/openapi.yml", "/docs")
 
 	resps := map[int]any{
 		http.StatusOK: struct {
@@ -53,7 +53,7 @@ func main() {
 		}{},
 	}
 
-	httpserverv2.Get(router, resps, "/hello", func(w myRespWriter, r *myRequest) {
+	openapiserver.Get(router, resps, "/hello", func(w myRespWriter, r *myRequest) {
 		w.Headers.XMen = r.Query.Name
 		w.Headers.ContentType = "application/json"
 

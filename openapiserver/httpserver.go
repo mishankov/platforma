@@ -1,4 +1,4 @@
-package httpserverv2
+package openapiserver
 
 import (
 	"encoding/json"
