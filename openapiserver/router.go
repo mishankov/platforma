@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/platforma-dev/platforma/log"
-
 	"github.com/oaswrap/spec"
 	"github.com/oaswrap/spec/option"
+	"github.com/platforma-dev/platforma/log"
 )
 
 type Router struct {
 	mux      http.ServeMux
+	spec     any
 	specPath string // OpenAPI specifications path
 	docPath  string // OpenAPI interactive documentation path
 }
@@ -26,39 +26,6 @@ func NewRouter(specPath, docPath string) *Router {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.mux.ServeHTTP(w, req)
-}
-
-type Request[Query, Headers, Body any] struct {
-	httpRequest *http.Request
-	Query       Query
-	Headers     Headers
-	bodyDecoded bool
-	body        *Body
-}
-
-func (r *Request[Query, Headers, Body]) Body() (*Body, error) {
-	if r.bodyDecoded {
-		return r.body, nil
-	}
-
-	if err := json.NewDecoder(r.httpRequest.Body).Decode(r.body); err != nil {
-		return nil, err
-	}
-	r.bodyDecoded = true
-
-	return r.body, nil
-}
-
-type ResponseWriter[Headers, Body any] struct {
-	StatusCode int
-	Headers    Headers
-	bodySet    bool
-	body       Body
-}
-
-func (w *ResponseWriter[Headers, Body]) SetBody(b Body) {
-	w.body = b
-	w.bodySet = true
 }
 
 type Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any] func(w *ResponseWriter[ResponseHeaders, ResponseBody], r *Request[Query, RequestHeaders, RequestBody])
