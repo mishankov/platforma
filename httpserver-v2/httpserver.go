@@ -63,26 +63,28 @@ func (w *ResponseWriter[Headers, Body]) SetBody(b Body) {
 
 type Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any] func(w *ResponseWriter[ResponseHeaders, ResponseBody], r *Request[Query, RequestHeaders, RequestBody])
 
-func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](router *Router, pattern string, handler Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](router *Router, resps map[int]any, pattern string, handler Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
 	// Prepare open api spec
 	r := spec.NewRouter()
 
-	// Add routes
 	v1 := r.Group("")
 
-	v1.Get(pattern,
-		option.Summary("User login"),
+	opts := []option.OperationOption{
 		option.Request(new(Query)),
 		option.Request(new(RequestHeaders)),
 		option.Request(new(RequestBody)),
-		option.Response(200, new(ResponseHeaders)),
-		option.Response(201, new(ResponseBody)),
-	)
+	}
+	for statusCode, respModel := range resps {
+		opts = append(opts, option.Response(statusCode, respModel))
+	}
+
+	v1.Get(pattern, opts...)
 
 	if err := r.WriteSchemaTo("openapi.yaml"); err != nil {
 		log.Error(err.Error())
 	}
 
+	// Add handler logic to mux
 	router.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		// Convert http request to user request
 		request := &Request[Query, RequestHeaders, RequestBody]{
@@ -122,23 +124,5 @@ func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](
 				log.Error("failed to encode body", "error", err)
 			}
 		}
-	})
-}
-
-func main() {
-	type myQuery struct {
-		Name string `query:"name"`
-	}
-
-	type myRespHeaders struct {
-		XMen string `header:"X-Men"`
-	}
-
-	type myRequest = Request[myQuery, any, any]
-	type myRespWriter = *ResponseWriter[myRespHeaders, any]
-
-	router := &Router{}
-	Get(router, "/hey", func(w myRespWriter, r *myRequest) {
-		w.Headers.XMen = r.Query.Name
 	})
 }
