@@ -19,12 +19,17 @@ type myRespHeaders struct {
 	ContentType string   `header:"Content-Type"`
 }
 
-type myRespBody struct {
-	Data []string `json:"data"`
+type errorRespBody struct {
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
-type errorResp struct {
-	ErrorMessage string `json:"errorMessage"`
+type successRespBody struct {
+	Data []string `json:"data,omitempty"`
+}
+
+type myRespBody struct {
+	errorRespBody
+	successRespBody
 }
 
 type myRequest = httpserverv2.Request[myQuery, myReqHeaders, any]
@@ -36,15 +41,15 @@ func main() {
 	resps := map[int]any{
 		http.StatusOK: struct {
 			myRespHeaders
-			myRespBody
+			successRespBody
 		}{},
 		http.StatusCreated: struct {
 			myRespHeaders
-			myRespBody
+			successRespBody
 		}{},
 		http.StatusBadRequest: struct {
 			myRespHeaders
-			errorResp
+			errorRespBody
 		}{},
 	}
 
@@ -54,12 +59,12 @@ func main() {
 
 		if r.Query.Name[0] == "xavier" {
 			w.StatusCode = http.StatusBadRequest
-			w.SetBody(errorResp{ErrorMessage: "banned superhero"})
+			w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
 
 			return
 		}
 
-		w.SetBody(myRespBody{Data: r.Query.Name})
+		w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Query.Name}})
 	})
 
 	http.ListenAndServe(":8080", router)
