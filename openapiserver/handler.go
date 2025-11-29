@@ -24,7 +24,7 @@ func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](
 	group.spec.Get(pattern, opts...)
 
 	// Add handler logic to mux
-	group.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+	group.handlerGroup.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		// Convert http request to user request
 		request := &Request[Query, RequestHeaders, RequestBody]{
 			httpRequest: r,
