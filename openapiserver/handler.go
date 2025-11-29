@@ -22,9 +22,9 @@ func Get[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps map
 // 	Handle(group, resps, http.MethodPost, pattern, handler)
 // }
 
-// func Put[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
-// 	Handle(group, resps, http.MethodPut, pattern, handler)
-// }
+func Put[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[RequestType, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodPut, pattern, handler)
+}
 
 // func Patch[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
 // 	Handle(group, resps, http.MethodPatch, pattern, handler)
@@ -58,12 +58,16 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 	group.spec.Add(method, pattern, opts...)
 
 	// Add handler logic to mux
-	group.handlerGroup.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+	group.handlerGroup.HandleFunc(method+" "+pattern, func(w http.ResponseWriter, r *http.Request) {
 		// Convert http request to user request
 		request := &Request[RequestType]{
 			HttpRequest: r,
 			Data:        new(RequestType),
 		}
+
+		// Path
+		pathToStruct(r, request.Data)
+
 		// Query
 		mapToStruct(r.URL.Query(), "query", request.Data)
 

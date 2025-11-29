@@ -8,6 +8,76 @@ import (
 	"strconv"
 )
 
+func pathToStruct(r *http.Request, target any) error {
+	v := reflect.ValueOf(target)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("target must be a pointer to a struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		structField := t.Field(i)
+
+		// Get path tag value
+		pathTag := structField.Tag.Get("path")
+		if pathTag == "" {
+			continue
+		}
+
+		// Get path parameter value
+		paramValue := r.PathValue(pathTag)
+		if paramValue == "" {
+			continue
+		}
+
+		// Set field based on its type
+		if !field.CanSet() {
+			return fmt.Errorf("field %s cannot be set", structField.Name)
+		}
+
+		switch field.Kind() {
+		case reflect.String:
+			field.SetString(paramValue)
+
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if intValue, err := strconv.ParseInt(paramValue, 10, 64); err == nil {
+				field.SetInt(intValue)
+			} else {
+				return fmt.Errorf("invalid int value %s for field %s", paramValue, structField.Name)
+			}
+
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if uintValue, err := strconv.ParseUint(paramValue, 10, 64); err == nil {
+				field.SetUint(uintValue)
+			} else {
+				return fmt.Errorf("invalid uint value %s for field %s", paramValue, structField.Name)
+			}
+
+		case reflect.Bool:
+			if boolValue, err := strconv.ParseBool(paramValue); err == nil {
+				field.SetBool(boolValue)
+			} else {
+				return fmt.Errorf("invalid bool value %s for field %s", paramValue, structField.Name)
+			}
+
+		case reflect.Float32, reflect.Float64:
+			if floatValue, err := strconv.ParseFloat(paramValue, 64); err == nil {
+				field.SetFloat(floatValue)
+			} else {
+				return fmt.Errorf("invalid float value %s for field %s", paramValue, structField.Name)
+			}
+
+		default:
+			return fmt.Errorf("unsupported field type %s for field %s", field.Kind(), structField.Name)
+		}
+	}
+
+	return nil
+}
+
 func mapFromStruct[T ~map[string][]string](in any, tag string) T {
 	out := make(map[string][]string)
 	v := reflect.ValueOf(in)

@@ -6,11 +6,6 @@ import (
 	"github.com/platforma-dev/platforma/openapiserver"
 )
 
-type myReq struct {
-	Name      []string `query:"name"`
-	UserAgent []string `header:"User-Agent"`
-}
-
 type myRespHeaders struct {
 	XMen        []string `header:"X-Men"`
 	ContentType string   `header:"Content-Type"`
@@ -29,7 +24,6 @@ type myRespBody struct {
 	successRespBody
 }
 
-type myRequest = openapiserver.Request[myReq]
 type myRespWriter = *openapiserver.ResponseWriter[myRespHeaders, myRespBody]
 
 func main() {
@@ -52,35 +46,44 @@ func main() {
 
 	helloGroup := openapiserver.NewGroup(router, "")
 
-	openapiserver.Get(helloGroup, resps, "/hello", func(w myRespWriter, r myRequest) {
-		w.Headers.XMen = r.Data.Name
-		w.Headers.ContentType = "application/json"
+	openapiserver.Get(
+		helloGroup, resps, "/hello",
+		func(w myRespWriter, r openapiserver.Request[struct {
+			Name      []string `query:"name"`
+			UserAgent []string `header:"User-Agent"`
+		}]) {
+			w.Headers.XMen = r.Data.Name
+			w.Headers.ContentType = "application/json"
 
-		if r.Data.Name[0] == "xavier" {
-			w.StatusCode = http.StatusBadRequest
-			w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
+			if r.Data.Name[0] == "xavier" {
+				w.StatusCode = http.StatusBadRequest
+				w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
 
-			return
-		}
+				return
+			}
 
-		w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Data.Name}})
-	})
+			w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Data.Name}})
+		})
 
-	// openapiserver.Put(
-	// 	helloGroup, resps, "/hello/{id}",
-	// 	func(w myRespWriter, r *openapiserver.Request[myQuery, myReqHeaders, any]) {
-	// 		w.Headers.XMen = r.Query.Name
-	// 		w.Headers.ContentType = "application/json"
+	openapiserver.Put(
+		helloGroup, resps, "/hello/{id}",
+		func(w myRespWriter, r openapiserver.Request[struct {
+			Id        string   `path:"id"`
+			Name      []string `query:"name"`
+			UserAgent []string `header:"User-Agent"`
+		}]) {
+			w.Headers.XMen = r.Data.Name
+			w.Headers.ContentType = "application/json"
 
-	// 		if r.Query.Name[0] == "xavier" {
-	// 			w.StatusCode = http.StatusBadRequest
-	// 			w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
+			if r.Data.Name[0] == "xavier" {
+				w.StatusCode = http.StatusBadRequest
+				w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
 
-	// 			return
-	// 		}
+				return
+			}
 
-	// 		w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Query.Name}})
-	// 	})
+			w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Data.Name}})
+		})
 
 	router.OpenAPI()
 
