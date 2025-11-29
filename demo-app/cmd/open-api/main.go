@@ -69,6 +69,22 @@ func main() {
 		w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Query.Name}})
 	})
 
+	openapiserver.Put(
+		helloGroup, resps, "/hello/{id}",
+		func(w myRespWriter, r *openapiserver.Request[myQuery, myReqHeaders, any]) {
+			w.Headers.XMen = r.Query.Name
+			w.Headers.ContentType = "application/json"
+
+			if r.Query.Name[0] == "xavier" {
+				w.StatusCode = http.StatusBadRequest
+				w.SetBody(myRespBody{errorRespBody: errorRespBody{ErrorMessage: "superhero banned"}})
+
+				return
+			}
+
+			w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Query.Name}})
+		})
+
 	router.OpenAPI()
 
 	http.ListenAndServe(":8080", router)

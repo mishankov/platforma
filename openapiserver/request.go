@@ -5,15 +5,16 @@ import (
 	"net/http"
 )
 
-type Request[Query, Headers, Body any] struct {
+type Request[Path, Query, Headers, Body any] struct {
 	httpRequest *http.Request
+	Path        Path
 	Query       Query
 	Headers     Headers
 	bodyDecoded bool
 	body        *Body
 }
 
-func (r *Request[Query, Headers, Body]) Body() (*Body, error) {
+func (r *Request[Path, Query, Headers, Body]) Body() (*Body, error) {
 	if r.bodyDecoded {
 		return r.body, nil
 	}

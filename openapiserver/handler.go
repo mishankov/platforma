@@ -8,9 +8,45 @@ import (
 	"github.com/platforma-dev/platforma/log"
 )
 
-type Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any] func(w *ResponseWriter[ResponseHeaders, ResponseBody], r *Request[Query, RequestHeaders, RequestBody])
+type Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any] func(w *ResponseWriter[ResponseHeaders, ResponseBody], r *Request[Path, Query, RequestHeaders, RequestBody])
 
-func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+func Get[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodGet, pattern, handler)
+}
+
+func Head[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodHead, pattern, handler)
+}
+
+func Post[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodPost, pattern, handler)
+}
+
+func Put[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodPut, pattern, handler)
+}
+
+func Patch[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodPatch, pattern, handler)
+}
+
+func Delete[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodDelete, pattern, handler)
+}
+
+func Connect[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodConnect, pattern, handler)
+}
+
+func Options[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodOptions, pattern, handler)
+}
+
+func Trace[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
+	Handle(group, resps, http.MethodTrace, pattern, handler)
+}
+
+func Handle[Path, Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, method string, pattern string, handler Handler[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody]) {
 	// Prepare open api spec
 	opts := []option.OperationOption{
 		option.Request(new(Query)),
@@ -21,7 +57,7 @@ func Get[Query, RequestHeaders, RequestBody, ResponseHeaders, ResponseBody any](
 		opts = append(opts, option.Response(statusCode, respModel))
 	}
 
-	group.spec.Get(pattern, opts...)
+	group.spec.Add(method, pattern, opts...)
 
 	// Add handler logic to mux
 	group.handlerGroup.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
