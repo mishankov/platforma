@@ -85,7 +85,5 @@ func main() {
 			w.SetBody(myRespBody{successRespBody: successRespBody{Data: r.Data.Name}})
 		})
 
-	router.OpenAPI()
-
 	http.ListenAndServe(":8080", router)
 }

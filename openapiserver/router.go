@@ -6,7 +6,6 @@ import (
 	"github.com/oaswrap/spec"
 	specui "github.com/oaswrap/spec-ui"
 	"github.com/platforma-dev/platforma/httpserver"
-	"github.com/platforma-dev/platforma/log"
 )
 
 type Router struct {
@@ -42,10 +41,4 @@ func NewRouter(specPath, docPath string) *Router {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.handlerGroup.ServeHTTP(w, req)
-}
-
-func (r *Router) OpenAPI() {
-	if err := r.spec.WriteSchemaTo("openapi.yaml"); err != nil {
-		log.Error(err.Error())
-	}
 }
