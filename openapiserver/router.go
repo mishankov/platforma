@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/oaswrap/spec"
+	specui "github.com/oaswrap/spec-ui"
 	"github.com/platforma-dev/platforma/httpserver"
 	"github.com/platforma-dev/platforma/log"
 )
@@ -16,9 +17,24 @@ type Router struct {
 }
 
 func NewRouter(specPath, docPath string) *Router {
+	hg := httpserver.NewHandlerGroup()
+	sp := spec.NewRouter()
+
+	if specPath != "" {
+		openapiHandler := specui.NewHandler(
+			specui.WithDocsPath(docPath),
+			specui.WithSpecPath(specPath),
+			specui.WithSpecGenerator(sp),
+			specui.WithScalar(),
+		)
+
+		hg.Handle(openapiHandler.SpecPath(), openapiHandler.Spec())
+		hg.Handle(openapiHandler.DocsPath(), openapiHandler.Docs())
+	}
+
 	return &Router{
-		handlerGroup: httpserver.NewHandlerGroup(),
-		spec:         spec.NewRouter(),
+		handlerGroup: hg,
+		spec:         sp,
 		specPath:     specPath,
 		docPath:      docPath,
 	}
