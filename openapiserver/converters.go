@@ -1,3 +1,4 @@
+// Package openapiserver provides utilities for handling OpenAPI server requests and responses.
 package openapiserver
 
 import (
@@ -8,16 +9,23 @@ import (
 	"strconv"
 )
 
+// Error definitions for converter functions.
+var (
+	ErrFieldNotSettable         = errors.New("field is not settable")
+	ErrOutMustBePointerToStruct = errors.New("out must be a non-nil pointer to struct")
+	ErrOutMustBePointer         = errors.New("out must be a pointer to struct")
+	ErrCannotSetField           = errors.New("cannot set field")
+	ErrUnsupportedFieldType     = errors.New("unsupported field type")
+	ErrUnsupportedSliceElemType = errors.New("unsupported slice element type")
+)
+
 func pathToStruct(r *http.Request, target any) error {
 	v := reflect.ValueOf(target)
-	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("target must be a pointer to a struct")
-	}
 
 	v = v.Elem()
 	t := v.Type()
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		field := v.Field(i)
 		structField := t.Field(i)
 
@@ -35,7 +43,7 @@ func pathToStruct(r *http.Request, target any) error {
 
 		// Set field based on its type
 		if !field.CanSet() {
-			return fmt.Errorf("field %s cannot be set", structField.Name)
+			return fmt.Errorf("field %s cannot be set: %w", structField.Name, ErrFieldNotSettable)
 		}
 
 		switch field.Kind() {
@@ -46,32 +54,32 @@ func pathToStruct(r *http.Request, target any) error {
 			if intValue, err := strconv.ParseInt(paramValue, 10, 64); err == nil {
 				field.SetInt(intValue)
 			} else {
-				return fmt.Errorf("invalid int value %s for field %s", paramValue, structField.Name)
+				return fmt.Errorf("invalid int value %s for field %s: %w", paramValue, structField.Name, err)
 			}
 
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			if uintValue, err := strconv.ParseUint(paramValue, 10, 64); err == nil {
 				field.SetUint(uintValue)
 			} else {
-				return fmt.Errorf("invalid uint value %s for field %s", paramValue, structField.Name)
+				return fmt.Errorf("invalid uint value %s for field %s: %w", paramValue, structField.Name, err)
 			}
 
 		case reflect.Bool:
 			if boolValue, err := strconv.ParseBool(paramValue); err == nil {
 				field.SetBool(boolValue)
 			} else {
-				return fmt.Errorf("invalid bool value %s for field %s", paramValue, structField.Name)
+				return fmt.Errorf("invalid bool value %s for field %s: %w", paramValue, structField.Name, err)
 			}
 
 		case reflect.Float32, reflect.Float64:
 			if floatValue, err := strconv.ParseFloat(paramValue, 64); err == nil {
 				field.SetFloat(floatValue)
 			} else {
-				return fmt.Errorf("invalid float value %s for field %s", paramValue, structField.Name)
+				return fmt.Errorf("invalid float value %s for field %s: %w", paramValue, structField.Name, err)
 			}
 
 		default:
-			return fmt.Errorf("unsupported field type %s for field %s", field.Kind(), structField.Name)
+			return fmt.Errorf("unsupported field type %s for field %s: %w", field.Kind(), structField.Name, ErrUnsupportedFieldType)
 		}
 	}
 
@@ -83,7 +91,7 @@ func mapFromStruct[T ~map[string][]string](in any, tag string) T {
 	v := reflect.ValueOf(in)
 	t := v.Type()
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		field := t.Field(i)
 		key := field.Tag.Get(tag)
 		if key == "" {
@@ -98,7 +106,7 @@ func mapFromStruct[T ~map[string][]string](in any, tag string) T {
 
 		// Check if the field is a slice
 		if fieldValue.Kind() == reflect.Slice {
-			for j := 0; j < fieldValue.Len(); j++ {
+			for j := range fieldValue.Len() {
 				elem := fieldValue.Index(j)
 				values = append(values, fmt.Sprintf("%v", elem.Interface()))
 			}
@@ -115,17 +123,17 @@ func mapFromStruct[T ~map[string][]string](in any, tag string) T {
 func mapToStruct[T ~map[string][]string](m T, tag string, out any) error {
 	v := reflect.ValueOf(out)
 	if v.Kind() != reflect.Pointer || v.IsNil() {
-		return errors.New("out must be a non-nil pointer to struct")
+		return ErrOutMustBePointerToStruct
 	}
 
 	v = v.Elem()
 	if v.Kind() != reflect.Struct {
-		return errors.New("out must be a pointer to struct")
+		return ErrOutMustBePointer
 	}
 
 	t := v.Type()
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
@@ -153,7 +161,7 @@ func mapToStruct[T ~map[string][]string](m T, tag string, out any) error {
 // setField sets a struct field value with enhanced type support
 func setField(field reflect.Value, values []string) error {
 	if !field.CanSet() {
-		return errors.New("cannot set field")
+		return ErrCannotSetField
 	}
 
 	fieldType := field.Type()
@@ -169,7 +177,7 @@ func setField(field reflect.Value, values []string) error {
 		if len(values) > 0 {
 			intVal, err := strconv.ParseInt(values[0], 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse int: %w", err)
 			}
 			field.SetInt(intVal)
 		}
@@ -178,7 +186,7 @@ func setField(field reflect.Value, values []string) error {
 		if len(values) > 0 {
 			uintVal, err := strconv.ParseUint(values[0], 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse uint: %w", err)
 			}
 			field.SetUint(uintVal)
 		}
@@ -187,7 +195,7 @@ func setField(field reflect.Value, values []string) error {
 		if len(values) > 0 {
 			floatVal, err := strconv.ParseFloat(values[0], 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse float: %w", err)
 			}
 			field.SetFloat(floatVal)
 		}
@@ -196,13 +204,13 @@ func setField(field reflect.Value, values []string) error {
 		if len(values) > 0 {
 			boolVal, err := strconv.ParseBool(values[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse bool: %w", err)
 			}
 			field.SetBool(boolVal)
 		}
 
 	default:
-		return fmt.Errorf("unsupported field type: %s", fieldType.Kind())
+		return fmt.Errorf("unsupported field type: %s: %w", fieldType.Kind(), ErrUnsupportedFieldType)
 	}
 
 	return nil
@@ -221,7 +229,7 @@ func setSliceField(field reflect.Value, values []string) error {
 		for i, v := range values {
 			intVal, err := strconv.Atoi(v)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse int in slice: %w", err)
 			}
 			intSlice[i] = intVal
 		}
@@ -232,7 +240,7 @@ func setSliceField(field reflect.Value, values []string) error {
 		for i, v := range values {
 			intVal, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse int64 in slice: %w", err)
 			}
 			intSlice[i] = intVal
 		}
@@ -243,7 +251,7 @@ func setSliceField(field reflect.Value, values []string) error {
 		for i, v := range values {
 			floatVal, err := strconv.ParseFloat(v, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse float64 in slice: %w", err)
 			}
 			floatSlice[i] = floatVal
 		}
@@ -254,14 +262,14 @@ func setSliceField(field reflect.Value, values []string) error {
 		for i, v := range values {
 			boolVal, err := strconv.ParseBool(v)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse bool in slice: %w", err)
 			}
 			boolSlice[i] = boolVal
 		}
 		field.Set(reflect.ValueOf(boolSlice))
 
 	default:
-		return fmt.Errorf("unsupported slice element type: %s", elemType.Kind())
+		return fmt.Errorf("unsupported slice element type: %s: %w", elemType.Kind(), ErrUnsupportedSliceElemType)
 	}
 
 	return nil

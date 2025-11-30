@@ -50,6 +50,9 @@ linters:
     - wrapcheck
 
   settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+
     iface:
       enable:
         - identical # Identifies interfaces in the same package that have identical method sets.

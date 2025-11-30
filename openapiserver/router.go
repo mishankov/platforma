@@ -8,6 +8,7 @@ import (
 	"github.com/platforma-dev/platforma/httpserver"
 )
 
+// Router manages HTTP routes and OpenAPI specifications.
 type Router struct {
 	handlerGroup *httpserver.HandlerGroup
 	spec         spec.Generator
@@ -15,6 +16,7 @@ type Router struct {
 	docPath      string // OpenAPI interactive documentation path
 }
 
+// NewRouter creates a new router with OpenAPI specification support.
 func NewRouter(specPath, docPath string) *Router {
 	hg := httpserver.NewHandlerGroup()
 	sp := spec.NewRouter()
