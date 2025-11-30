@@ -3,6 +3,8 @@ package openapiserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 
 	"github.com/oaswrap/spec/option"
@@ -96,7 +98,10 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 
 		// Body
 		if err := json.NewDecoder(r.Body).Decode(request.Data); err != nil {
-			log.ErrorContext(ctx, "failed to decode body", "error", err)
+			// If body is empty, do not log this error
+			if !errors.Is(err, io.EOF) {
+				log.ErrorContext(ctx, "failed to decode body", "error", err)
+			}
 		}
 
 		// Call user handle
