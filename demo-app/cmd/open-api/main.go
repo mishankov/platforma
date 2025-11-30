@@ -45,7 +45,7 @@ func main() {
 		}{},
 	}
 
-	helloGroup := openapiserver.NewGroup(router, "")
+	helloGroup := openapiserver.NewGroup(router, "/")
 
 	openapiserver.Get(
 		helloGroup, resps, "/hello",

@@ -14,7 +14,7 @@ type Group struct {
 // NewGroup creates a new route group with the specified pattern.
 func NewGroup(router *Router, pattern string) *Group {
 	hg := httpserver.NewHandlerGroup()
-	router.handlerGroup.HandleGroup(pattern, hg)
+	router.handlerGroup.Handle(pattern, hg)
 	group := router.spec.Group(pattern)
 
 	return &Group{
