@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/platforma-dev/platforma/openapiserver"
@@ -48,7 +49,7 @@ func main() {
 
 	openapiserver.Get(
 		helloGroup, resps, "/hello",
-		func(w myRespWriter, r openapiserver.Request[struct {
+		func(_ context.Context, w myRespWriter, r openapiserver.Request[struct {
 			Name      []string `query:"name"`
 			UserAgent []string `header:"User-Agent"`
 		}]) {
@@ -67,7 +68,7 @@ func main() {
 
 	openapiserver.Put(
 		helloGroup, resps, "/hello/{id}",
-		func(w myRespWriter, r openapiserver.Request[struct {
+		func(_ context.Context, w myRespWriter, r openapiserver.Request[struct {
 			Id        string   `path:"id"`
 			Name      []string `query:"name"`
 			UserAgent []string `header:"User-Agent"`

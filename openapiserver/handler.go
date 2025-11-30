@@ -1,6 +1,7 @@
 package openapiserver
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // Handler defines a function type for handling HTTP requests with typed request and response parameters.
-type Handler[RequestType, ResponseHeaders, ResponseBody any] func(w *ResponseWriter[ResponseHeaders, ResponseBody], r Request[RequestType])
+type Handler[RequestType, ResponseHeaders, ResponseBody any] func(ctx context.Context, w *ResponseWriter[ResponseHeaders, ResponseBody], r Request[RequestType])
 
 // Get registers a GET route handler.
 func Get[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps map[int]any, pattern string, handler Handler[RequestType, ResponseHeaders, ResponseBody]) {
@@ -70,6 +71,8 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 
 	// Add handler logic to mux
 	group.handlerGroup.HandleFunc(method+" "+pattern, func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		// Convert http request to user request
 		request := &Request[RequestType]{
 			HTTPRequest: r,
@@ -98,7 +101,7 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 
 		// Call user handle
 		writer := ResponseWriter[ResponseHeaders, ResponseBody]{}
-		handler(&writer, *request)
+		handler(ctx, &writer, *request)
 
 		// Headers
 		headers := mapFromStruct[map[string][]string](writer.Headers, "header")
