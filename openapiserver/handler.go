@@ -81,22 +81,22 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 
 		// Path
 		if err := pathToStruct(r, request.Data); err != nil {
-			log.Error("failed to parse path parameters", "error", err)
+			log.ErrorContext(ctx, "failed to parse path parameters", "error", err)
 		}
 
 		// Query
 		if err := mapToStruct(r.URL.Query(), "query", request.Data); err != nil {
-			log.Error("failed to parse query parameters", "error", err)
+			log.ErrorContext(ctx, "failed to parse query parameters", "error", err)
 		}
 
 		// Headers
 		if err := mapToStruct(r.Header, "header", request.Data); err != nil {
-			log.Error("failed to parse headers", "error", err)
+			log.ErrorContext(ctx, "failed to parse headers", "error", err)
 		}
 
 		// Body
 		if err := json.NewDecoder(r.Body).Decode(request.Data); err != nil {
-			log.Error("failed to decode body", "error", err)
+			log.ErrorContext(ctx, "failed to decode body", "error", err)
 		}
 
 		// Call user handle
@@ -120,7 +120,7 @@ func Handle[RequestType, ResponseHeaders, ResponseBody any](group *Group, resps 
 		// Body
 		if writer.bodySet {
 			if err := json.NewEncoder(w).Encode(writer.body); err != nil {
-				log.Error("failed to encode body", "error", err)
+				log.ErrorContext(ctx, "failed to encode body", "error", err)
 			}
 		}
 	})
