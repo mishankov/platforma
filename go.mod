@@ -9,7 +9,7 @@ require (
 	github.com/oaswrap/spec v0.3.6
 	github.com/oaswrap/spec-ui v0.1.4
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
-	golang.org/x/crypto v0.43.0
+	golang.org/x/crypto v0.45.0
 )
 
 require (
@@ -65,7 +65,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	google.golang.org/grpc v1.75.1 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
