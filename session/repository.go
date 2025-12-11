@@ -78,3 +78,14 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+func (r *Repository) DeleteByUserId(ctx context.Context, userId string) error {
+	query := `
+		DELETE FROM sessions WHERE "user" = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, userId)
+	if err != nil {
+		return fmt.Errorf("failed to delete sessions by user id: %w", err)
+	}
+	return nil
+}

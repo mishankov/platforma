@@ -58,3 +58,7 @@ func (s *Service) CreateSessionForUser(ctx context.Context, userId string) (stri
 
 	return session.ID, nil
 }
+
+func (s *Service) DeleteSessionsByUserId(ctx context.Context, userId string) error {
+	return s.repo.DeleteByUserId(ctx, userId)
+}
