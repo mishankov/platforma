@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,11 +9,15 @@ import (
 	"github.com/platforma-dev/platforma/log"
 )
 
-type DeleteHandler struct {
-	service *Service
+type userDeleter interface {
+	DeleteUser(ctx context.Context) error
 }
 
-func NewDeleteHandler(service *Service) *DeleteHandler {
+type DeleteHandler struct {
+	service userDeleter
+}
+
+func NewDeleteHandler(service userDeleter) *DeleteHandler {
 	return &DeleteHandler{
 		service: service,
 	}
