@@ -17,12 +17,14 @@ type repository interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	Create(ctx context.Context, user *User) error
 	UpdatePassword(ctx context.Context, id, password, salt string) error
+	Delete(ctx context.Context, id string) error
 }
 
 type authStorage interface {
 	GetUserIdFromSessionId(context.Context, string) (string, error)
 	CreateSessionForUser(context.Context, string) (string, error)
 	DeleteSession(ctx context.Context, sessionId string) error
+	DeleteSessionsByUserId(ctx context.Context, userId string) error
 }
 
 type Service struct {
@@ -120,10 +122,6 @@ func (s *Service) CreateSessionFromUsernameAndPassword(ctx context.Context, user
 
 	session, err := s.authStorage.CreateSessionForUser(ctx, user.ID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get session: %w", err)
-	}
-
-	if err != nil {
 		return "", fmt.Errorf("failed to create session: %w", err)
 	}
 	return session, nil
@@ -170,6 +168,26 @@ func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPasswo
 	err = s.repo.UpdatePassword(ctx, user.ID, string(hashedPassword), newSalt)
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) DeleteUser(ctx context.Context) error {
+	user := UserFromContext(ctx)
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	// Delete all user sessions first
+	err := s.authStorage.DeleteSessionsByUserId(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user sessions: %w", err)
+	}
+
+	// Delete the user
+	err = s.repo.Delete(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
 	}
 	return nil
 }

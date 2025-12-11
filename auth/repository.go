@@ -84,3 +84,12 @@ func (r *Repository) UpdatePassword(ctx context.Context, id, password, salt stri
 	}
 	return nil
 }
+
+func (r *Repository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	return nil
+}
