@@ -115,6 +115,48 @@ The `openapiserver` package provides automatic OpenAPI specification generation:
 - Serves interactive Scalar UI documentation
 - See `openapiserver/router.go` for initialization
 
+## Writing Package Documentation
+
+Package documentation lives in `docs/src/content/docs/packages/` as MDX files. Follow these principles when writing or updating documentation.
+
+### Required Structure
+
+Every package doc should include these sections in order:
+
+1. **Front matter** - YAML with `title: packagename`
+2. **Imports** - Starlight components: `LinkButton`, `Steps`, optionally `Code`
+3. **Introduction** - Single sentence describing what the package provides
+4. **Core Components** - Bulleted list of main types/interfaces with one-line descriptions. Note if a type implements `Runner` interface for Application compatibility
+5. **Step-by-step guide** - Using `<Steps>` component with 4-7 numbered steps
+6. **Using with Application** - How to integrate with the `application` package
+7. **Additional sections** - Package-specific features, best practices, or reference tables
+8. **Complete example** - Import from `demo-app/cmd/` or provide inline
+
+### Key Qualities
+
+- **Brief introductions**: One sentence explaining purpose, e.g., "The `queue` package provides a generic, concurrent job processing system"
+- **Progressive steps**: Start with creation, move through configuration, end with running and expected output
+- **Focused code snippets**: Show only what's necessary, no boilerplate imports unless relevant
+- **Expected output**: Include terminal/log output examples to help verify correctness
+- **Integration examples**: Always demonstrate `app.RegisterService()` pattern where applicable
+- **Prefer demo imports**: Use `import importedCode from '../../../../../demo-app/cmd/example/main.go?raw'` over inline code for complete examples
+
+### Example Step Format
+
+```mdx
+<Steps>
+1. Create a new instance
+
+    ```go
+    s := scheduler.New(time.Second, runner)
+    ```
+
+    Brief explanation of parameters or behavior.
+
+2. Next step...
+</Steps>
+```
+
 ## Testing
 
 - Tests use standard Go testing with `testcontainers-go` for PostgreSQL integration tests
