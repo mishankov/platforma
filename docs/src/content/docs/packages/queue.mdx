@@ -73,6 +73,21 @@ Core Components:
     ```
 </Steps>
 
+## Using with Application
+
+Since `Processor` implements the `Runner` interface, it can be registered as a service in an `Application`:
+
+```go
+app := application.New()
+
+q := queue.NewChanQueue[job](10, 3*time.Second)
+p := queue.New(queue.HandlerFunc[job](jobHandler), q, 2, time.Second)
+
+app.RegisterService("job-processor", p)
+
+app.Run(ctx)
+```
+
 ## Complete example
 
 import { Code } from '@astrojs/starlight/components';

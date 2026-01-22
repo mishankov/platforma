@@ -89,6 +89,23 @@ Core Components:
 
 </Steps>
 
+## Using with Application
+
+Since `HTTPServer` implements the `Runner` interface, it can be registered as a service in an `Application`:
+
+```go
+app := application.New()
+
+api := httpserver.New("8080", 3*time.Second)
+api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("pong"))
+})
+
+app.RegisterService("api", api)
+
+app.Run(ctx)
+```
+
 ## Built-in Middleware
 
 ### TraceIDMiddleware

@@ -23,9 +23,11 @@ export default defineConfig({
         {
           label: "Packages",
           items: [
+            "packages/application",
             "packages/database",
             "packages/httpserver",
             "packages/log",
+            "packages/scheduler",
             "packages/queue",
           ],
         },

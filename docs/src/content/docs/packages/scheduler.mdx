@@ -1,0 +1,75 @@
+---
+title: scheduler
+---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `scheduler` package provides a periodic task runner that executes actions at fixed intervals using Go's standard `time.Ticker`.
+
+Core Components:
+
+- `Scheduler`: Manages periodic execution of tasks at a specified interval. Implements `Runner` interface so it can be used as an `application` service.
+- `application.Runner`: Interface for defining task logic (from the `application` package)
+- `application.RunnerFunc`: Helper function type that implements `Runner` interface
+
+## Step-by-step guide
+
+<Steps>
+
+1. First, define a function that will be executed periodically. It should match the `application.Runner` interface signature
+
+    ```go
+    func scheduledTask(ctx context.Context) error {
+        log.InfoContext(ctx, "scheduled task executed")
+        return nil
+    }
+    ```
+
+2. Create a new `Scheduler` instance with the desired period and runner
+
+    ```go
+    s := scheduler.New(time.Second, application.RunnerFunc(scheduledTask))
+    ```
+
+    Here we set the period to 1 second and use `RunnerFunc` helper to convert our function to a `Runner`. The scheduler will execute the task every second.
+
+3. Start the scheduler
+
+    ```go
+    ctx := context.Background()
+    s.Run(ctx)
+    ```
+
+    The scheduler will continue running until the context is canceled.
+
+4. Run this code and you will see output like this
+
+    ```
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="scheduler task started"
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="scheduled task executed"
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="scheduler task finished"
+    time=2025-11-11T22:01:27.630+03:00 level=INFO msg="scheduler task started"
+    time=2025-11-11T22:01:27.630+03:00 level=INFO msg="scheduled task executed"
+    time=2025-11-11T22:01:27.630+03:00 level=INFO msg="scheduler task finished"
+    ```
+
+</Steps>
+
+## Using with Application
+
+Since `Scheduler` implements the `Runner` interface, it can be registered as a service in an `Application`:
+
+```go
+app := application.New()
+
+s := scheduler.New(time.Minute, application.RunnerFunc(cleanupTask))
+app.RegisterService("cleanup-scheduler", s)
+
+app.Run(ctx)
+```
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/scheduler/main.go?raw';
+
+<Code code={importedCode} lang="go" title="scheduler.go" />

@@ -1,0 +1,299 @@
+---
+title: application
+---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `application` package provides the central orchestrator for managing the lifecycle of your application, including startup tasks, services, databases, and health checks.
+
+Core Components:
+
+- `Application`: Central orchestrator that manages startup tasks, services, databases, and health checks
+- `Runner`: Interface for defining services and startup tasks that can be executed
+- `StartupTaskConfig`: Configuration for startup tasks with name and abort-on-error behavior
+- `Domain`: Interface for self-contained modules that bundle repository, service, and handlers
+- `Healthchecker`: Interface for services that can report their health status
+- `HealthCheckHandler`: HTTP handler for exposing application health
+
+## Step-by-step guide
+
+<Steps>
+
+1. Create a new `Application` instance
+
+    ```go
+    app := application.New()
+    ```
+
+2. Define a service that implements the `Runner` interface
+
+    ```go
+    type MyService struct{}
+
+    func (s *MyService) Run(ctx context.Context) error {
+        ticker := time.NewTicker(1 * time.Second)
+        defer ticker.Stop()
+
+        for {
+            select {
+            case <-ticker.C:
+                log.InfoContext(ctx, "service tick")
+            case <-ctx.Done():
+                log.InfoContext(ctx, "service shutting down")
+                return nil
+            }
+        }
+    }
+    ```
+
+3. Register startup tasks that run before services start. You can use `RunnerFunc` helper for simple tasks
+
+    ```go
+    app.OnStartFunc(func(ctx context.Context) error {
+        log.InfoContext(ctx, "initialization complete")
+        return nil
+    }, application.StartupTaskConfig{
+        Name:         "init",
+        AbortOnError: true,
+    })
+    ```
+
+    Setting `AbortOnError` to `true` will stop the application if this task fails.
+
+4. Register your service with the application
+
+    ```go
+    app.RegisterService("my-service", &MyService{})
+    ```
+
+5. Run the application
+
+    ```go
+    ctx := context.Background()
+
+    if err := app.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "app finished with error", "error", err)
+    }
+    ```
+
+6. Run this code and you will see output like this
+
+    ```
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="starting application" startupTasks=1
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="running task" task=init index=0
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="initialization complete"
+    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="starting service" serviceName=my-service
+    time=2025-11-11T22:01:27.631+03:00 level=INFO msg="service tick"
+    time=2025-11-11T22:01:28.631+03:00 level=INFO msg="service tick"
+    ```
+
+    Press Ctrl+C to gracefully shutdown the application.
+</Steps>
+
+## Register Methods
+
+The `Application` struct provides several methods for registering components. These methods allow you to add services, databases, repositories, and domains to your application.
+
+### RegisterService
+
+Registers a named service that will run concurrently when the application starts. Services must implement the `Runner` interface.
+
+```go
+func (a *Application) RegisterService(serviceName string, service Runner)
+```
+
+**Parameters:**
+- `serviceName` - Unique identifier for the service (used in logs and health checks)
+- `service` - Any type implementing the `Runner` interface
+
+**Example:**
+
+```go
+app := application.New()
+
+// Create and register an HTTP server
+api := httpserver.New("8080", 3*time.Second)
+api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("pong"))
+})
+app.RegisterService("api", api)
+
+// Create and register a queue processor
+processor := queue.NewProcessor(myQueue, myHandler, 5, 10*time.Second)
+app.RegisterService("queue-processor", processor)
+
+// Create and register a scheduler
+scheduler := scheduler.New()
+scheduler.AddJob("cleanup", cleanupTask, 1*time.Hour)
+app.RegisterService("scheduler", scheduler)
+
+app.Run(ctx)
+```
+
+If the service also implements the `Healthchecker` interface, its health status will automatically be tracked and available via `app.Health()`.
+
+### RegisterDatabase
+
+Registers a database connection with the application. All registered databases are automatically migrated when `app.Run()` is called.
+
+```go
+func (a *Application) RegisterDatabase(dbName string, db *database.Database)
+```
+
+**Parameters:**
+- `dbName` - Unique identifier for the database
+- `db` - A `*database.Database` instance
+
+**Example:**
+
+```go
+app := application.New()
+
+// Create database connection
+db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Register database with the application
+app.RegisterDatabase("main", db)
+
+// You can register multiple databases
+analyticsDB, _ := database.New("postgres://user:password@localhost:5432/analytics?sslmode=disable")
+app.RegisterDatabase("analytics", analyticsDB)
+
+app.Run(ctx) // Migrations run automatically for all registered databases
+```
+
+### RegisterRepository
+
+Registers a repository with a specific database. The repository must implement the `migrator` interface (have a `Migrations()` method) to enable automatic schema migrations.
+
+```go
+func (a *Application) RegisterRepository(dbName string, repoName string, repository any)
+```
+
+**Parameters:**
+- `dbName` - Name of the database (must be registered with `RegisterDatabase` first)
+- `repoName` - Unique identifier for the repository
+- `repository` - Repository instance implementing the `migrator` interface
+
+**Example:**
+
+```go
+// Define a repository with migrations
+type UserRepository struct {
+    db *sqlx.DB
+}
+
+func (r *UserRepository) Migrations() []database.Migration {
+    return []database.Migration{
+        {
+            ID:   "create_users_table",
+            Up:   "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL)",
+            Down: "DROP TABLE users",
+        },
+        {
+            ID:   "add_created_at_column",
+            Up:   "ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW()",
+            Down: "ALTER TABLE users DROP COLUMN created_at",
+        },
+    }
+}
+
+// Register the repository
+app := application.New()
+db, _ := database.New(connStr)
+app.RegisterDatabase("main", db)
+
+userRepo := &UserRepository{db: db.Connection()}
+app.RegisterRepository("main", "users", userRepo)
+
+app.Run(ctx) // Migrations from userRepo.Migrations() will run automatically
+```
+
+### RegisterDomain
+
+Registers a domain (self-contained module) with the application. Domains bundle together a repository, service, and HTTP handlers. If a database name is provided, the domain's repository is automatically registered.
+
+```go
+func (a *Application) RegisterDomain(name, dbName string, domain Domain)
+```
+
+**Parameters:**
+- `name` - Unique identifier for the domain
+- `dbName` - Name of the database to associate with (pass empty string `""` if no database is needed)
+- `domain` - Domain instance implementing the `Domain` interface
+
+**Domain Interface:**
+
+```go
+type Domain interface {
+    GetRepository() any
+}
+```
+
+**Example:**
+
+```go
+app := application.New()
+
+// Setup database
+db, _ := database.New(connStr)
+app.RegisterDatabase("main", db)
+
+// Create and register auth domain
+authDomain := auth.New(
+    db.Connection(),
+    sessionStorage,
+    "session_id",
+    auth.DefaultUsernameValidator,
+    auth.DefaultPasswordValidator,
+)
+app.RegisterDomain("auth", "main", authDomain)
+
+// Mount auth endpoints on the HTTP server
+api := httpserver.New("8080", 3*time.Second)
+api.HandleGroup("/auth", authDomain.HandleGroup)
+
+// Use auth middleware for protected routes
+protectedGroup := httpserver.NewHandlerGroup()
+protectedGroup.Use(authDomain.Middleware)
+protectedGroup.HandleFunc("/profile", profileHandler)
+api.HandleGroup("/api", protectedGroup)
+
+app.RegisterService("api", api)
+app.Run(ctx)
+```
+
+## Execution Order
+
+When you call `app.Run(ctx)`, the following happens in order:
+
+1. **Database migrations** - All registered databases are migrated
+2. **Startup tasks** - Tasks run sequentially in registration order
+3. **Services** - All services start concurrently in separate goroutines
+4. **Wait** - Application waits for context cancellation (Ctrl+C)
+5. **Shutdown** - Services receive context cancellation for graceful shutdown
+
+## Health Checks
+
+Services that implement the `Healthchecker` interface will automatically have their health status tracked:
+
+```go
+type Healthchecker interface {
+    Healthcheck(context.Context) any
+}
+```
+
+You can expose application health via HTTP using `HealthCheckHandler`:
+
+```go
+api.Handle("/health", application.NewHealthCheckHandler(app))
+```
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/clock/main.go?raw';
+
+<Code code={importedCode} lang="go" title="application.go" />

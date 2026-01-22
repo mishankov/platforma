@@ -1,3 +1,148 @@
 ---
 title: log
 ---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `log` package provides structured logging functionality with context support, built on top of Go's standard `log/slog` package.
+
+Core Components:
+
+- `Logger`: Default logger instance used by package-level logging functions
+- `New`: Creates a new logger with configurable output format (JSON/text), log level, and custom context keys
+- `contextHandler`: Custom slog handler that automatically extracts values from context
+- Context Keys: Predefined keys for common attributes (TraceID, ServiceName, UserID, etc.)
+
+## Step-by-step guide
+
+<Steps>
+
+1. Use package-level logging functions for simple logging
+
+    ```go
+    log.Info("application started")
+    log.Debug("processing item", "id", 123)
+    log.Warn("deprecated feature used")
+    log.Error("failed to connect", "error", err)
+    ```
+
+2. Use context-aware logging to automatically include contextual information
+
+    ```go
+    ctx := context.WithValue(ctx, log.TraceIDKey, "abc-123")
+    ctx = context.WithValue(ctx, log.UserIDKey, "user-456")
+
+    log.InfoContext(ctx, "request processed")
+    // Output includes: traceId=abc-123 userId=user-456
+    ```
+
+3. Create a custom logger with JSON output format
+
+    ```go
+    logger := log.New(os.Stdout, "json", slog.LevelDebug, nil)
+    log.SetDefault(logger)
+    ```
+
+4. Add custom context keys to your logger
+
+    ```go
+    type myContextKey string
+    const RequestIDKey myContextKey = "requestId"
+
+    customKeys := map[string]any{
+        "requestId": RequestIDKey,
+    }
+
+    logger := log.New(os.Stdout, "text", slog.LevelInfo, customKeys)
+    log.SetDefault(logger)
+
+    ctx := context.WithValue(context.Background(), RequestIDKey, "req-789")
+    log.InfoContext(ctx, "custom key extracted")
+    // Output includes: requestId=req-789
+    ```
+
+5. Run your application and you will see output like this
+
+    ```
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="request processed" traceId=abc-123 userId=user-456
+    ```
+
+</Steps>
+
+## Using with Application
+
+The `log` package integrates seamlessly with `Application` services. Context values are automatically propagated through services:
+
+```go
+app := application.New()
+
+// Services receive context with ServiceNameKey automatically set
+app.RegisterService("api", api)
+
+// Startup tasks receive context with StartupTaskKey automatically set
+app.OnStartFunc(func(ctx context.Context) error {
+    log.InfoContext(ctx, "initializing") // Logs with startupTask=init
+    return nil
+}, application.StartupTaskConfig{Name: "init"})
+
+// Queue workers receive context with WorkerIDKey automatically set
+app.RegisterService("processor", processor)
+
+app.Run(ctx)
+```
+
+## Built-in Context Keys
+
+The package provides predefined context keys that are automatically extracted from context:
+
+| Key | Description |
+|-----|-------------|
+| `DomainNameKey` | Domain name for domain-scoped operations |
+| `TraceIDKey` | Request trace ID for distributed tracing |
+| `ServiceNameKey` | Service name identifier |
+| `StartupTaskKey` | Startup task name |
+| `UserIDKey` | User ID for user-scoped operations |
+| `WorkerIDKey` | Worker ID for queue processor workers |
+
+## Complete example
+
+```go
+package main
+
+import (
+	"context"
+	"log/slog"
+	"os"
+
+	"github.com/mishankov/platforma/log"
+)
+
+func main() {
+	// Create a JSON logger with Debug level
+	logger := log.New(os.Stdout, "json", slog.LevelDebug, nil)
+	log.SetDefault(logger)
+
+	// Create context with trace ID
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, log.TraceIDKey, "trace-abc-123")
+	ctx = context.WithValue(ctx, log.ServiceNameKey, "my-service")
+
+	// Log messages at different levels
+	log.Debug("debug message")
+	log.Info("info message", "key", "value")
+
+	// Context-aware logging automatically includes context values
+	log.InfoContext(ctx, "processing request", "endpoint", "/api/users")
+	log.WarnContext(ctx, "slow query detected", "duration_ms", 1500)
+	log.ErrorContext(ctx, "operation failed", "error", "connection refused")
+}
+```
+
+Output:
+
+```json
+{"time":"2025-11-11T22:01:26.630+03:00","level":"DEBUG","msg":"debug message"}
+{"time":"2025-11-11T22:01:26.630+03:00","level":"INFO","msg":"info message","key":"value"}
+{"time":"2025-11-11T22:01:26.630+03:00","level":"INFO","msg":"processing request","endpoint":"/api/users","traceId":"trace-abc-123","serviceName":"my-service"}
+{"time":"2025-11-11T22:01:26.630+03:00","level":"WARN","msg":"slow query detected","duration_ms":1500,"traceId":"trace-abc-123","serviceName":"my-service"}
+{"time":"2025-11-11T22:01:26.630+03:00","level":"ERROR","msg":"operation failed","error":"connection refused","traceId":"trace-abc-123","serviceName":"my-service"}
+```

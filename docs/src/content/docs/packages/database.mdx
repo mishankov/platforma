@@ -1,3 +1,113 @@
 ---
 title: database
 ---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `database` package provides PostgreSQL database connection management with built-in migration support.
+
+Core Components:
+
+- `Database`: Manages database connection and coordinates migrations for registered repositories
+- `Migration`: Defines a database migration with `ID`, `Up`, and `Down` SQL statements
+- `migrator` interface: Implemented by repositories that need automatic migrations
+
+## Step-by-step guide
+
+<Steps>
+
+1. First, create a connection to your PostgreSQL database
+
+    ```go
+    db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
+    if err != nil {
+        log.ErrorContext(ctx, "failed to connect", "error", err)
+    }
+    ```
+
+2. Define your repository with migrations by implementing the `Migrations()` method
+
+    ```go
+    type UserRepository struct {
+        db *sqlx.DB
+    }
+
+    func (r *UserRepository) Migrations() []database.Migration {
+        return []database.Migration{
+            {
+                ID:   "create_users_table",
+                Up:   "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL)",
+                Down: "DROP TABLE users",
+            },
+        }
+    }
+    ```
+
+3. Create your repository using the database connection and register it
+
+    ```go
+    userRepo := &UserRepository{db: db.Connection()}
+    db.RegisterRepository("users", userRepo)
+    ```
+
+    The `Connection()` method returns the underlying `*sqlx.DB` that you can use in your repository methods.
+
+4. Run migrations to apply all pending changes
+
+    ```go
+    err = db.Migrate(ctx)
+    if err != nil {
+        log.ErrorContext(ctx, "migration failed", "error", err)
+    }
+    ```
+
+    The migration system:
+    - Creates a `platforma_migrations` table to track applied migrations
+    - Only runs migrations that haven't been applied yet
+    - Automatically reverts applied migrations if any migration fails
+    - Is idempotent - running migrations multiple times is safe
+
+5. Use your repository to interact with the database
+
+    ```go
+    var users []User
+    err = userRepo.db.SelectContext(ctx, &users, "SELECT * FROM users")
+    ```
+
+</Steps>
+
+## Using with Application
+
+The `Database` can be registered with an `Application` to automatically run migrations on startup:
+
+```go
+app := application.New()
+
+db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
+if err != nil {
+    log.ErrorContext(ctx, "failed to connect", "error", err)
+}
+
+app.RegisterDatabase("main", db)
+
+app.Run(ctx)
+```
+
+When using domains, you can associate them with a registered database:
+
+```go
+app.RegisterDomain("users", "main", usersDomain)
+```
+
+## Migration Best Practices
+
+- Give each migration a unique, descriptive `ID` (e.g., `"create_users_table"`, `"add_email_to_users"`)
+- Always provide both `Up` and `Down` SQL statements for rollback capability
+- Keep migrations small and focused on a single change
+- Never modify existing migrations - create new ones instead
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/database/main.go?raw';
+
+<Code code={importedCode} lang="go" title="database.go" />
