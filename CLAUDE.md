@@ -107,14 +107,6 @@ HandlerGroups can be nested and mounted on other groups or servers, allowing mod
 - `StartupTaskKey`: Startup task name
 - `WorkerIDKey`: Queue worker ID
 
-## OpenAPI Support
-
-The `openapiserver` package provides automatic OpenAPI specification generation:
-- Wraps handlers to extract request/response types
-- Generates OpenAPI 3.0 spec at runtime
-- Serves interactive Scalar UI documentation
-- See `openapiserver/router.go` for initialization
-
 ## Writing Package Documentation
 
 Package documentation lives in `docs/src/content/docs/packages/` as MDX files. Follow these principles when writing or updating documentation.
