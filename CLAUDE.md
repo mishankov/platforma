@@ -1,0 +1,122 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+Platforma is a Go framework for building web applications with built-in support for HTTP servers, database migrations, authentication, background job processing, and scheduled tasks. It uses a layered architecture with Application as the central orchestrator.
+
+## Build and Test Commands
+
+### Using Task (Taskfile)
+- **Run linter**: `task lint`
+- **Auto-fix linting issues**: `task fix`
+- **Run tests with coverage**: `task test` (generates `coverage.html` and `coverage.out`)
+- **Run both lint and test**: `task check`
+- **Run documentation server**: `task docs` (runs in `docs/` directory)
+
+### Using Go directly
+- **Run all tests**: `go test ./...`
+- **Run tests with coverage**: `go test -coverprofile=coverage.tmp.out ./...`
+- **Build demo apps**: `go build ./demo-app/cmd/...`
+
+### CLI Commands
+The main binary provides CLI commands:
+- **Version**: `go run main.go --version` or `go run main.go -v`
+- **Generate**: `go run main.go generate [args]`
+- **Docs**: `go run main.go docs [args]`
+
+## Architecture
+
+### Core Application Pattern
+
+The framework follows a lifecycle-based architecture centered around `application.Application`:
+
+1. **Application** (`application/application.go`) - Central orchestrator that manages:
+   - **Startup Tasks**: One-time initialization tasks that run sequentially before services start
+   - **Services**: Long-running components (HTTP servers, queue processors, schedulers) that run concurrently
+   - **Databases**: PostgreSQL databases with automatic migration support
+   - **Health Checks**: Monitors service status and health
+
+2. **Domains** - Self-contained modules that bundle repository, service, and HTTP handlers:
+   - Implement `Domain` interface with `GetRepository()` method
+   - Example: `auth/domain.go` packages repository, service, handler group, and middleware together
+   - Registered via `app.RegisterDomain(name, dbName, domain)`
+
+3. **HTTP Server** (`httpserver/httpserver.go`):
+   - Wraps Go's standard HTTP server with middleware support
+   - **HandlerGroup**: Composable routing groups with nested middleware
+   - Built-in middleware: TraceID, Recovery, Authentication
+   - Graceful shutdown with configurable timeout
+
+4. **Database** (`database/database.go`):
+   - PostgreSQL via `sqlx` and `lib/pq` driver
+   - Automatic migrations through repository registration
+   - Repositories implement `migrator` interface with `Migrations()` method
+   - Migration tracking ensures idempotent migrations
+
+5. **Queue Processor** (`queue/processor.go`):
+   - Generic job processing with worker pool pattern
+   - Supports custom queue providers (e.g., `chanqueue.go` for channel-based queues)
+   - Graceful shutdown with job draining during shutdown timeout
+   - Panic recovery per worker
+
+6. **Scheduler** (`scheduler/scheduler.go`):
+   - Executes `application.Runner` implementations at fixed intervals
+   - Uses standard `time.Ticker` for scheduling
+
+### Package Structure
+
+- **application/**: Core application lifecycle management
+- **auth/**: Authentication domain (session-based, username/password)
+- **session/**: Session storage domain
+- **httpserver/**: HTTP server with middleware and routing
+- **database/**: Database connection and migration system
+- **queue/**: Generic job queue processing
+- **scheduler/**: Periodic task scheduler
+- **openapiserver/**: OpenAPI specification generation and Scalar UI
+- **log/**: Logging utilities with context key support
+- **demo-app/cmd/**: Example applications showing framework usage
+- **internal/cli/**: CLI command implementations
+
+### Key Patterns
+
+**Service Registration and Startup Flow**:
+```go
+app := application.New()
+app.RegisterDatabase("main", db)
+app.RegisterDomain("auth", "main", authDomain)
+app.RegisterService("api", httpServer)
+app.OnStart(migrationTask, config)
+app.Run(ctx)
+```
+
+**Execution Order**:
+1. Database migrations for all registered databases
+2. Startup tasks (sequential, with optional abort-on-error)
+3. Services (concurrent goroutines)
+4. Wait for context cancellation (Ctrl+C)
+5. Graceful shutdown of all services
+
+**HandlerGroup Composition**:
+HandlerGroups can be nested and mounted on other groups or servers, allowing modular route organization with scoped middleware.
+
+**Context Keys** (`log/log.go`):
+- `TraceIDKey`: Request tracing ID
+- `ServiceNameKey`: Service identifier
+- `StartupTaskKey`: Startup task name
+- `WorkerIDKey`: Queue worker ID
+
+## OpenAPI Support
+
+The `openapiserver` package provides automatic OpenAPI specification generation:
+- Wraps handlers to extract request/response types
+- Generates OpenAPI 3.0 spec at runtime
+- Serves interactive Scalar UI documentation
+- See `openapiserver/router.go` for initialization
+
+## Testing
+
+- Tests use standard Go testing with `testcontainers-go` for PostgreSQL integration tests
+- Coverage excludes `demo-app` and `docs` directories
+- CI runs on Ubuntu and Windows for cross-platform compatibility
