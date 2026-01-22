@@ -1,3 +1,165 @@
 ---
 title: httpserver
 ---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `httpserver` package provides HTTP server functionality with middleware support and graceful shutdown.
+
+Core Components:
+
+- `HTTPServer`: Main HTTP server with graceful shutdown. Implements `Runner` interface so it can be used as an `application` service.
+- `HandlerGroup`: Composable routing groups with scoped middleware
+- `Middleware`: Interface for defining HTTP middleware
+- `MiddlewareFunc`: Helper for converting functions to middleware
+- `TraceIDMiddleware`: Built-in middleware for request tracing
+- `RecoverMiddleware`: Built-in middleware for panic recovery
+- `FileServer`: Static file server implementation
+
+## Step-by-step guide
+
+<Steps>
+
+1. Create a new HTTP server with port and shutdown timeout
+
+    ```go
+    api := httpserver.New("8080", 3*time.Second)
+    ```
+
+    The shutdown timeout determines how long the server waits for active requests to complete during graceful shutdown.
+
+2. Add routes using `HandleFunc` for simple handlers
+
+    ```go
+    api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("pong"))
+    })
+    ```
+
+3. Add middleware to the server
+
+    ```go
+    api.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+    api.Use(httpserver.NewRecoverMiddleware())
+    ```
+
+    `TraceIDMiddleware` adds a unique trace ID to each request context and response headers. `RecoverMiddleware` catches panics and returns HTTP 500 responses.
+
+4. Create a handler group for nested routes with scoped middleware
+
+    ```go
+    subApiGroup := httpserver.NewHandlerGroup()
+
+    subApiGroup.HandleFunc("/clock", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte(time.Now().String()))
+    })
+
+    subApiGroup.UseFunc(func(h http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            log.InfoContext(r.Context(), "incoming request", "addr", r.RemoteAddr)
+            h.ServeHTTP(w, r)
+        })
+    })
+    ```
+
+5. Mount the handler group on the server
+
+    ```go
+    api.HandleGroup("/subApi", subApiGroup)
+    ```
+
+    Now `/subApi/clock` is accessible and the logging middleware only applies to routes in this group.
+
+6. Register the server with your application and run it
+
+    ```go
+    app := application.New()
+    app.RegisterService("api", api)
+
+    if err := app.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "app finished with error", "error", err)
+    }
+    ```
+
+7. Access your endpoints
+
+    ```
+    GET http://localhost:8080/ping
+    GET http://localhost:8080/subApi/clock
+    ```
+
+</Steps>
+
+## Built-in Middleware
+
+### TraceIDMiddleware
+
+Adds a unique UUID trace ID to each request. The trace ID is:
+- Added to the request context (accessible via `log.TraceIDKey`)
+- Set in response headers (`Platforma-Trace-Id` by default)
+
+```go
+// Use defaults
+api.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+
+// Custom context key and header
+api.Use(httpserver.NewTraceIDMiddleware(myContextKey, "X-Request-Id"))
+```
+
+### RecoverMiddleware
+
+Catches panics in handlers, logs the error, and returns HTTP 500.
+
+```go
+api.Use(httpserver.NewRecoverMiddleware())
+```
+
+## Custom Middleware
+
+You can create custom middleware in two ways:
+
+### Using MiddlewareFunc
+
+```go
+api.UseFunc(func(h http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Before handler
+        h.ServeHTTP(w, r)
+        // After handler
+    })
+})
+```
+
+### Implementing Middleware interface
+
+```go
+type MyMiddleware struct{}
+
+func (m *MyMiddleware) Wrap(h http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Before handler
+        h.ServeHTTP(w, r)
+        // After handler
+    })
+}
+
+api.Use(&MyMiddleware{})
+```
+
+## FileServer
+
+For serving static files:
+
+```go
+//go:embed static
+var staticFiles embed.FS
+
+fileServer := httpserver.NewFileServer(staticFiles, "/static", "8080")
+app.RegisterService("files", fileServer)
+```
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/api/main.go?raw';
+
+<Code code={importedCode} lang="go" title="api.go" />
