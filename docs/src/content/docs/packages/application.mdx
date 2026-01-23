@@ -1,0 +1,201 @@
+---
+title: application
+---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `application` package provides the central orchestrator for managing the lifecycle of your application, including startup tasks, services, databases, and health checks.
+
+Core Components:
+
+- `Application`: Central orchestrator that manages startup tasks, services, databases, and health checks
+- `Runner`: Interface that services and startup tasks must implement to be executed by the application
+- `RunnerFunc`: Function type that implements `Runner` for simple inline tasks
+- `StartupTaskConfig`: Configuration for startup tasks with name and abort-on-error behavior
+- `Domain`: Interface for self-contained modules that bundle repository and other components
+- `Healthchecker`: Interface for services that can report their health status
+- `HealthCheckHandler`: HTTP handler for exposing application health as JSON
+- `ApplicationHealth`: Tracks overall application health and individual service statuses
+- `ServiceHealth`: Health status for a single service including start time and errors
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/application)
+
+## Step-by-step guide
+
+<Steps>
+
+1. Create a new `Application` instance
+
+    ```go
+    app := application.New()
+    ```
+
+2. Define a service that implements the `Runner` interface
+
+    ```go
+    type MyService struct{}
+
+    func (s *MyService) Run(ctx context.Context) error {
+        ticker := time.NewTicker(1 * time.Second)
+        defer ticker.Stop()
+
+        for {
+            select {
+            case <-ticker.C:
+                log.InfoContext(ctx, "service tick")
+            case <-ctx.Done():
+                log.InfoContext(ctx, "service shutting down")
+                return nil
+            }
+        }
+    }
+    ```
+
+    The `Run` method should block until the context is canceled or an error occurs.
+
+3. Register startup tasks that run before services start
+
+    ```go
+    app.OnStartFunc(func(ctx context.Context) error {
+        log.InfoContext(ctx, "initialization complete")
+        return nil
+    }, application.StartupTaskConfig{
+        Name:         "init",
+        AbortOnError: true,
+    })
+    ```
+
+    Setting `AbortOnError` to `true` stops the application if this task fails. Use `OnStart` for `Runner` implementations or `OnStartFunc` for inline functions.
+
+4. Register your service with the application
+
+    ```go
+    app.RegisterService("my-service", &MyService{})
+    ```
+
+5. Run the application
+
+    ```go
+    ctx := context.Background()
+
+    if err := app.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "app finished with error", "error", err)
+    }
+    ```
+
+6. Run this code and you will see output like this
+
+    ```
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="starting application" startupTasks=1
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="running task" task=init index=0
+    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="initialization complete"
+    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="starting service" serviceName=my-service
+    time=2025-11-11T22:01:27.631+03:00 level=INFO msg="service tick"
+    time=2025-11-11T22:01:28.631+03:00 level=INFO msg="service tick"
+    ```
+
+    Press Ctrl+C to gracefully shutdown the application.
+
+</Steps>
+
+## Execution order
+
+When you call `app.Run(ctx)`, the following happens in order:
+
+1. **Database migrations** - All registered databases run their migrations
+2. **Startup tasks** - Tasks run sequentially in registration order
+3. **Services** - All services start concurrently in separate goroutines
+4. **Wait** - Application waits for context cancellation (Ctrl+C)
+5. **Shutdown** - Services receive context cancellation for graceful shutdown
+
+## Register methods
+
+### RegisterService
+
+Registers a named service that runs concurrently when the application starts.
+
+```go
+app.RegisterService("api", httpServer)
+app.RegisterService("queue-processor", processor)
+```
+
+If the service implements `Healthchecker`, its health status is automatically tracked.
+
+### RegisterDatabase
+
+Registers a database connection. All registered databases are migrated automatically when `Run` is called.
+
+```go
+db, _ := database.New("postgres://user:pass@localhost:5432/mydb?sslmode=disable")
+app.RegisterDatabase("main", db)
+```
+
+### RegisterRepository
+
+Registers a repository with a database. The repository must have a `Migrations()` method.
+
+```go
+app.RegisterRepository("main", "users", userRepo)
+```
+
+### RegisterDomain
+
+Registers a domain module. If a database name is provided, the domain's repository is registered automatically.
+
+```go
+app.RegisterDomain("auth", "main", authDomain)
+```
+
+## Health checks
+
+Services implementing `Healthchecker` have their health tracked automatically:
+
+```go
+type Healthchecker interface {
+    Healthcheck(context.Context) any
+}
+```
+
+Expose health via HTTP using `HealthCheckHandler`:
+
+```go
+api.Handle("/health", application.NewHealthCheckHandler(app))
+```
+
+The response includes application start time and per-service status:
+
+```json
+{
+  "startedAt": "2025-01-01T12:00:00Z",
+  "services": {
+    "api": {
+      "status": "STARTED",
+      "startedAt": "2025-01-01T12:00:00Z"
+    }
+  }
+}
+```
+
+## Error handling
+
+The application returns specific error types:
+
+- `ErrStartupTaskFailed` - Returned when a startup task with `AbortOnError: true` fails
+- `ErrDatabaseMigrationFailed` - Returned when database migration fails
+
+Both error types support unwrapping to get the underlying error:
+
+```go
+if err := app.Run(ctx); err != nil {
+    var migrationErr *application.ErrDatabaseMigrationFailed
+    if errors.As(err, &migrationErr) {
+        log.ErrorContext(ctx, "migration failed", "cause", migrationErr.Unwrap())
+    }
+}
+```
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/clock/main.go?raw';
+
+<Code code={importedCode} lang="go" title="application.go" />

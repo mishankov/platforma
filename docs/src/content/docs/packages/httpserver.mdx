@@ -1,3 +1,164 @@
 ---
 title: httpserver
 ---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `httpserver` package provides an HTTP server with middleware support, composable handler groups, and graceful shutdown.
+
+Core Components:
+
+- `HTTPServer`: HTTP server with middleware support and graceful shutdown. Implements `Runner` interface so it can be used as an `application` service.
+- `HandlerGroup`: Composable group of HTTP handlers that share common middlewares. Implements `http.Handler` for nesting.
+- `Middleware`: Interface for HTTP middleware with a `Wrap(http.Handler) http.Handler` method.
+- `MiddlewareFunc`: Function type that implements `Middleware` for inline middleware definitions.
+- `TraceIDMiddleware`: Adds a unique trace ID to request context and response headers.
+- `RecoverMiddleware`: Catches panics in handlers and returns HTTP 500 responses.
+- `FileServer`: Serves static files from an `fs.FS`. Implements `Runner` interface.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/httpserver)
+
+## Step-by-step guide
+
+<Steps>
+
+1. Create a new HTTP server
+
+    ```go
+    server := httpserver.New("8080", 3*time.Second)
+    ```
+
+    The first argument is the port, the second is the shutdown timeout for graceful shutdown.
+
+2. Register handlers
+
+    ```go
+    server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("pong"))
+    })
+
+    server.Handle("/health", healthHandler)
+    ```
+
+    Use `HandleFunc` for handler functions or `Handle` for `http.Handler` implementations.
+
+3. Add middleware to the server
+
+    ```go
+    server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+    server.Use(httpserver.NewRecoverMiddleware())
+    ```
+
+    Middlewares are applied in the order they are added. `TraceIDMiddleware` adds a trace ID to all requests, `RecoverMiddleware` catches panics.
+
+4. Create a handler group for nested routes
+
+    ```go
+    apiGroup := httpserver.NewHandlerGroup()
+
+    apiGroup.HandleFunc("/users", usersHandler)
+    apiGroup.HandleFunc("/posts", postsHandler)
+    ```
+
+    Handler groups let you organize routes with shared middleware.
+
+5. Add middleware specific to the group
+
+    ```go
+    apiGroup.UseFunc(func(h http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            log.InfoContext(r.Context(), "API request", "path", r.URL.Path)
+            h.ServeHTTP(w, r)
+        })
+    })
+    ```
+
+    Use `UseFunc` to add inline middleware functions, or `Use` for `Middleware` implementations.
+
+6. Mount the group on the server
+
+    ```go
+    server.HandleGroup("/api", apiGroup)
+    ```
+
+    The group is now accessible at `/api/users` and `/api/posts`. The path prefix is automatically stripped.
+
+7. Run the server
+
+    ```go
+    ctx := context.Background()
+    if err := server.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "server error", "error", err)
+    }
+    ```
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="starting http server" address=:8080
+    ```
+
+    Press Ctrl+C to trigger graceful shutdown. The server waits for in-flight requests up to the shutdown timeout.
+
+</Steps>
+
+## Using with Application
+
+Since `HTTPServer` implements the `Runner` interface, it can be registered as a service in an `Application`:
+
+```go
+app := application.New()
+
+server := httpserver.New("8080", 3*time.Second)
+server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("pong"))
+})
+
+app.RegisterService("api", server)
+
+app.Run(ctx)
+```
+
+The server also implements `Healthchecker`, so its health status is automatically tracked by the application.
+
+## Built-in middlewares
+
+### TraceIDMiddleware
+
+Adds a unique UUID trace ID to each request's context and response headers.
+
+```go
+// Uses defaults: log.TraceIDKey for context, "Platforma-Trace-Id" header
+server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+
+// Custom context key and header
+server.Use(httpserver.NewTraceIDMiddleware(myContextKey, "X-Request-ID"))
+```
+
+The trace ID is available in handlers via `r.Context().Value(log.TraceIDKey)`.
+
+### RecoverMiddleware
+
+Catches panics in handlers, logs the error with request context, and returns HTTP 500.
+
+```go
+server.Use(httpserver.NewRecoverMiddleware())
+```
+
+## FileServer
+
+Serves static files from an `fs.FS` implementation:
+
+```go
+//go:embed static
+var staticFiles embed.FS
+
+fileServer := httpserver.NewFileServer(staticFiles, "/static", "8080")
+app.RegisterService("files", fileServer)
+```
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/api/main.go?raw';
+
+<Code code={importedCode} lang="go" title="httpserver.go" />

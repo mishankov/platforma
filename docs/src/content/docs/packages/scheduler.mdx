@@ -1,0 +1,93 @@
+---
+title: scheduler
+---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `scheduler` package provides periodic task execution at fixed intervals.
+
+Core Components:
+
+- `Scheduler`: Executes a runner at configured intervals. Implements `Runner` interface so it can be used as an `application` service.
+- `New(period, runner)`: Creates a new scheduler with the specified interval and runner.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/scheduler)
+
+## Step-by-step guide
+
+<Steps>
+
+1. Create a task function
+
+    ```go
+    func scheduledTask(ctx context.Context) error {
+        log.InfoContext(ctx, "scheduled task executed")
+        return nil
+    }
+    ```
+
+    The function receives a context with a unique trace ID for each execution.
+
+2. Create a scheduler
+
+    ```go
+    s := scheduler.New(time.Second, application.RunnerFunc(scheduledTask))
+    ```
+
+    First argument is the interval between executions. Second is any `application.Runner` implementation. Use `application.RunnerFunc` to wrap a function.
+
+3. Run the scheduler
+
+    ```go
+    err := s.Run(ctx)
+    ```
+
+    The scheduler blocks and executes the task at each interval until the context is cancelled.
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:01.000+00:00 level=INFO msg="scheduler task started" traceID=abc-123
+    time=2025-01-01T12:00:01.000+00:00 level=INFO msg="scheduled task executed" traceID=abc-123
+    time=2025-01-01T12:00:01.000+00:00 level=INFO msg="scheduler task finished" traceID=abc-123
+    time=2025-01-01T12:00:02.000+00:00 level=INFO msg="scheduler task started" traceID=def-456
+    time=2025-01-01T12:00:02.000+00:00 level=INFO msg="scheduled task executed" traceID=def-456
+    time=2025-01-01T12:00:02.000+00:00 level=INFO msg="scheduler task finished" traceID=def-456
+    ```
+
+4. Handle errors
+
+    ```go
+    func scheduledTask(ctx context.Context) error {
+        if err := doWork(); err != nil {
+            return err // Logged automatically, scheduler continues
+        }
+        return nil
+    }
+    ```
+
+    Errors returned from the task are logged but do not stop the scheduler. The next execution proceeds as normal.
+
+</Steps>
+
+## Using with Application
+
+Since `Scheduler` implements the `Runner` interface, it can be registered as a service in an `Application`:
+
+```go
+app := application.New()
+
+s := scheduler.New(time.Minute, application.RunnerFunc(scheduledTask))
+
+app.RegisterService("scheduler", s)
+
+app.Run(ctx)
+```
+
+The scheduler starts when the application runs and stops when the application shuts down.
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/scheduler/main.go?raw';
+
+<Code code={importedCode} lang="go" title="scheduler.go" />
