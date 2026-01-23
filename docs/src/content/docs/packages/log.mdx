@@ -3,105 +3,146 @@ title: log
 ---
 import { LinkButton, Steps } from '@astrojs/starlight/components';
 
-The `log` package provides structured logging functionality with context support, built on top of Go's standard `log/slog` package.
+The `log` package provides structured logging with automatic context value extraction for tracing and debugging.
 
 Core Components:
 
-- `Logger`: Default logger instance used by package-level logging functions
-- `New`: Creates a new logger with configurable output format (JSON/text), log level, and custom context keys
-- `contextHandler`: Custom slog handler that automatically extracts values from context
-- Context Keys: Predefined keys for common attributes (TraceID, ServiceName, UserID, etc.)
+- `Logger`: Default logger instance used by package-level logging functions.
+- `New`: Creates a new `slog.Logger` with text or JSON output and custom context keys.
+- `SetDefault`: Replaces the default logger used by package-level functions.
+- `TraceIDKey`, `ServiceNameKey`, `WorkerIDKey`, etc.: Context keys automatically extracted into log output.
+- `Debug`, `Info`, `Warn`, `Error`: Package-level logging functions.
+- `DebugContext`, `InfoContext`, `WarnContext`, `ErrorContext`: Context-aware logging functions that extract trace IDs and other values.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/log)
 
 ## Step-by-step guide
 
 <Steps>
 
-1. Use package-level logging functions for simple logging
+1. Use package-level logging functions
 
     ```go
-    log.Info("application started")
-    log.Debug("processing item", "id", 123)
-    log.Warn("deprecated feature used")
+    log.Info("server started", "port", 8080)
     log.Error("failed to connect", "error", err)
     ```
 
-2. Use context-aware logging to automatically include contextual information
+    These use the default logger which outputs text format at Info level.
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="server started" port=8080
+    ```
+
+2. Use context-aware logging
 
     ```go
     ctx := context.WithValue(ctx, log.TraceIDKey, "abc-123")
-    ctx = context.WithValue(ctx, log.UserIDKey, "user-456")
-
-    log.InfoContext(ctx, "request processed")
-    // Output includes: traceId=abc-123 userId=user-456
+    log.InfoContext(ctx, "processing request", "path", "/users")
     ```
 
-3. Create a custom logger with JSON output format
+    Context values from known keys are automatically added to log output.
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="processing request" path=/users traceId=abc-123
+    ```
+
+3. Create a custom logger
+
+    ```go
+    logger := log.New(os.Stdout, "json", slog.LevelDebug, nil)
+    logger.Info("message", "key", "value")
+    ```
+
+    The second argument is the format: `"text"` or `"json"`. The third is the minimum log level.
+
+    Expected JSON output:
+
+    ```json
+    {"time":"2025-01-01T12:00:00.000+00:00","level":"INFO","msg":"message","key":"value"}
+    ```
+
+4. Set a custom default logger
 
     ```go
     logger := log.New(os.Stdout, "json", slog.LevelDebug, nil)
     log.SetDefault(logger)
+
+    log.Info("now using JSON format")
     ```
 
-4. Add custom context keys to your logger
+    After calling `SetDefault`, all package-level functions use the new logger.
+
+5. Add custom context keys
 
     ```go
-    type myContextKey string
-    const RequestIDKey myContextKey = "requestId"
+    type myKey string
+    const RequestIDKey myKey = "requestId"
 
     customKeys := map[string]any{
         "requestId": RequestIDKey,
     }
-
     logger := log.New(os.Stdout, "text", slog.LevelInfo, customKeys)
     log.SetDefault(logger)
 
-    ctx := context.WithValue(context.Background(), RequestIDKey, "req-789")
+    ctx := context.WithValue(ctx, RequestIDKey, "req-456")
     log.InfoContext(ctx, "custom key extracted")
-    // Output includes: requestId=req-789
     ```
 
-5. Run your application and you will see output like this
+    Expected output:
 
     ```
-    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="request processed" traceId=abc-123 userId=user-456
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="custom key extracted" requestId=req-456
     ```
 
 </Steps>
 
+## Built-in context keys
+
+The logger automatically extracts these context keys when using `*Context` functions:
+
+| Key | Description |
+|-----|-------------|
+| `TraceIDKey` | Request trace ID for distributed tracing |
+| `ServiceNameKey` | Service identifier |
+| `DomainNameKey` | Domain name for domain-based architectures |
+| `StartupTaskKey` | Startup task name during application initialization |
+| `UserIDKey` | Authenticated user ID |
+| `WorkerIDKey` | Queue processor worker ID |
+
 ## Using with Application
 
-The `log` package integrates seamlessly with `Application` services. Context values are automatically propagated through services:
+The `application` package and other Platforma components automatically set context keys like `ServiceNameKey` and `StartupTaskKey`. Use context-aware logging to include this information:
 
 ```go
 app := application.New()
 
-// Services receive context with ServiceNameKey automatically set
-app.RegisterService("api", api)
-
-// Startup tasks receive context with StartupTaskKey automatically set
-app.OnStartFunc(func(ctx context.Context) error {
-    log.InfoContext(ctx, "initializing") // Logs with startupTask=init
-    return nil
-}, application.StartupTaskConfig{Name: "init"})
-
-// Queue workers receive context with WorkerIDKey automatically set
-app.RegisterService("processor", processor)
+app.OnStart(application.StartupTask{
+    Name: "init-cache",
+    Task: func(ctx context.Context, config any) error {
+        log.InfoContext(ctx, "initializing cache")
+        // startupTask=init-cache automatically added to output
+        return nil
+    },
+}, nil)
 
 app.Run(ctx)
 ```
 
-## Built-in Context Keys
+With `httpserver.TraceIDMiddleware`, the trace ID is automatically available in request handlers:
 
-The package provides predefined context keys that are automatically extracted from context:
+```go
+server := httpserver.New("8080", 3*time.Second)
+server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
 
-| Key | Description |
-|-----|-------------|
-| `DomainNameKey` | Domain name for domain-scoped operations |
-| `TraceIDKey` | Request trace ID for distributed tracing |
-| `ServiceNameKey` | Service name identifier |
-| `StartupTaskKey` | Startup task name |
-| `UserIDKey` | User ID for user-scoped operations |
-| `WorkerIDKey` | Worker ID for queue processor workers |
+server.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+    log.InfoContext(r.Context(), "handling request")
+    // traceId=<uuid> automatically added to output
+})
+```
 
 ## Complete example
 
@@ -111,38 +152,36 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
-	"github.com/mishankov/platforma/log"
+	"github.com/platforma-dev/platforma/application"
+	"github.com/platforma-dev/platforma/httpserver"
+	"github.com/platforma-dev/platforma/log"
 )
 
 func main() {
-	// Create a JSON logger with Debug level
+	ctx := context.Background()
+
+	// Configure JSON logging at Debug level
 	logger := log.New(os.Stdout, "json", slog.LevelDebug, nil)
 	log.SetDefault(logger)
 
-	// Create context with trace ID
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, log.TraceIDKey, "trace-abc-123")
-	ctx = context.WithValue(ctx, log.ServiceNameKey, "my-service")
+	app := application.New()
 
-	// Log messages at different levels
-	log.Debug("debug message")
-	log.Info("info message", "key", "value")
+	server := httpserver.New("8080", 3*time.Second)
+	server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
 
-	// Context-aware logging automatically includes context values
-	log.InfoContext(ctx, "processing request", "endpoint", "/api/users")
-	log.WarnContext(ctx, "slow query detected", "duration_ms", 1500)
-	log.ErrorContext(ctx, "operation failed", "error", "connection refused")
+	server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		log.InfoContext(r.Context(), "ping received")
+		w.Write([]byte("pong"))
+	})
+
+	app.RegisterService("api", server)
+
+	if err := app.Run(ctx); err != nil {
+		log.ErrorContext(ctx, "app finished with error", "error", err)
+	}
 }
-```
-
-Output:
-
-```json
-{"time":"2025-11-11T22:01:26.630+03:00","level":"DEBUG","msg":"debug message"}
-{"time":"2025-11-11T22:01:26.630+03:00","level":"INFO","msg":"info message","key":"value"}
-{"time":"2025-11-11T22:01:26.630+03:00","level":"INFO","msg":"processing request","endpoint":"/api/users","traceId":"trace-abc-123","serviceName":"my-service"}
-{"time":"2025-11-11T22:01:26.630+03:00","level":"WARN","msg":"slow query detected","duration_ms":1500,"traceId":"trace-abc-123","serviceName":"my-service"}
-{"time":"2025-11-11T22:01:26.630+03:00","level":"ERROR","msg":"operation failed","error":"connection refused","traceId":"trace-abc-123","serviceName":"my-service"}
 ```

@@ -3,32 +3,41 @@ title: database
 ---
 import { LinkButton, Steps } from '@astrojs/starlight/components';
 
-The `database` package provides PostgreSQL database connection management with built-in migration support.
+The `database` package provides PostgreSQL database connection and automatic migration functionality.
 
 Core Components:
 
-- `Database`: Manages database connection and coordinates migrations for registered repositories
-- `Migration`: Defines a database migration with `ID`, `Up`, and `Down` SQL statements
-- `migrator` interface: Implemented by repositories that need automatic migrations
+- `Database`: Manages database connection, repository registration, and migration execution
+- `Migration`: Represents a database migration with `ID`, `Up`, and `Down` SQL statements
+- `migrator` interface: Repositories implementing `Migrations() []Migration` are automatically migrated
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/database)
 
 ## Step-by-step guide
 
 <Steps>
 
-1. First, create a connection to your PostgreSQL database
+1. Create a new database connection
 
     ```go
     db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
     if err != nil {
         log.ErrorContext(ctx, "failed to connect", "error", err)
+        os.Exit(1)
     }
     ```
 
-2. Define your repository with migrations by implementing the `Migrations()` method
+    The connection string follows standard PostgreSQL format.
+
+2. Define a repository with migrations
 
     ```go
     type UserRepository struct {
         db *sqlx.DB
+    }
+
+    func NewUserRepository(db *sqlx.DB) *UserRepository {
+        return &UserRepository{db: db}
     }
 
     func (r *UserRepository) Migrations() []database.Migration {
@@ -42,68 +51,77 @@ Core Components:
     }
     ```
 
-3. Create your repository using the database connection and register it
+    The `Migrations()` method makes your repository a migrator. Each migration needs a unique `ID`, `Up` SQL to apply, and `Down` SQL to revert.
+
+3. Get the underlying connection and create your repository
 
     ```go
-    userRepo := &UserRepository{db: db.Connection()}
+    userRepo := NewUserRepository(db.Connection())
+    ```
+
+    `Connection()` returns the underlying `*sqlx.DB` for your repository operations.
+
+4. Register the repository with the database
+
+    ```go
     db.RegisterRepository("users", userRepo)
     ```
 
-    The `Connection()` method returns the underlying `*sqlx.DB` that you can use in your repository methods.
+    Registration enables automatic migration when `Migrate()` is called.
 
-4. Run migrations to apply all pending changes
+5. Run migrations
 
     ```go
     err = db.Migrate(ctx)
     if err != nil {
         log.ErrorContext(ctx, "migration failed", "error", err)
+        os.Exit(1)
     }
     ```
 
-    The migration system:
-    - Creates a `platforma_migrations` table to track applied migrations
-    - Only runs migrations that haven't been applied yet
-    - Automatically reverts applied migrations if any migration fails
-    - Is idempotent - running migrations multiple times is safe
+    Migrations are tracked in the `platforma_migrations` table. Only pending migrations are applied.
 
-5. Use your repository to interact with the database
+6. Use your repository
 
     ```go
-    var users []User
-    err = userRepo.db.SelectContext(ctx, &users, "SELECT * FROM users")
+    user, err := userRepo.Create(ctx, "John Doe")
     ```
+
+    After migrations complete, your tables are ready for use.
 
 </Steps>
 
 ## Using with Application
 
-The `Database` can be registered with an `Application` to automatically run migrations on startup:
+When using the `application` package, databases are migrated automatically during startup:
 
 ```go
 app := application.New()
 
-db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
-if err != nil {
-    log.ErrorContext(ctx, "failed to connect", "error", err)
-}
-
+db, _ := database.New("postgres://user:pass@localhost:5432/mydb?sslmode=disable")
 app.RegisterDatabase("main", db)
+
+userRepo := NewUserRepository(db.Connection())
+app.RegisterRepository("main", "users", userRepo)
+
+app.RegisterService("api", httpServer)
 
 app.Run(ctx)
 ```
 
-When using domains, you can associate them with a registered database:
+The application runs migrations for all registered databases before starting services.
 
-```go
-app.RegisterDomain("users", "main", usersDomain)
-```
+## Migration tracking
 
-## Migration Best Practices
+Migrations are tracked in the `platforma_migrations` table with three columns:
 
-- Give each migration a unique, descriptive `ID` (e.g., `"create_users_table"`, `"add_email_to_users"`)
-- Always provide both `Up` and `Down` SQL statements for rollback capability
-- Keep migrations small and focused on a single change
-- Never modify existing migrations - create new ones instead
+| Column | Description |
+|--------|-------------|
+| `repository` | Name used in `RegisterRepository` |
+| `id` | Migration ID from your `Migrations()` method |
+| `timestamp` | When the migration was applied |
+
+If a migration fails, previously applied migrations in the same batch are reverted using their `Down` SQL.
 
 ## Complete example
 

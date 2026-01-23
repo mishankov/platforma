@@ -11,9 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// SchedulerAction defines the function signature for actions executed by the scheduler.
-type SchedulerAction func(context.Context) error
-
 // Scheduler represents a periodic task runner that executes an action at fixed intervals.
 type Scheduler struct {
 	period time.Duration      // The interval between action executions

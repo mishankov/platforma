@@ -3,89 +3,101 @@ title: httpserver
 ---
 import { LinkButton, Steps } from '@astrojs/starlight/components';
 
-The `httpserver` package provides HTTP server functionality with middleware support and graceful shutdown.
+The `httpserver` package provides an HTTP server with middleware support, composable handler groups, and graceful shutdown.
 
 Core Components:
 
-- `HTTPServer`: Main HTTP server with graceful shutdown. Implements `Runner` interface so it can be used as an `application` service.
-- `HandlerGroup`: Composable routing groups with scoped middleware
-- `Middleware`: Interface for defining HTTP middleware
-- `MiddlewareFunc`: Helper for converting functions to middleware
-- `TraceIDMiddleware`: Built-in middleware for request tracing
-- `RecoverMiddleware`: Built-in middleware for panic recovery
-- `FileServer`: Static file server implementation
+- `HTTPServer`: HTTP server with middleware support and graceful shutdown. Implements `Runner` interface so it can be used as an `application` service.
+- `HandlerGroup`: Composable group of HTTP handlers that share common middlewares. Implements `http.Handler` for nesting.
+- `Middleware`: Interface for HTTP middleware with a `Wrap(http.Handler) http.Handler` method.
+- `MiddlewareFunc`: Function type that implements `Middleware` for inline middleware definitions.
+- `TraceIDMiddleware`: Adds a unique trace ID to request context and response headers.
+- `RecoverMiddleware`: Catches panics in handlers and returns HTTP 500 responses.
+- `FileServer`: Serves static files from an `fs.FS`. Implements `Runner` interface.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/httpserver)
 
 ## Step-by-step guide
 
 <Steps>
 
-1. Create a new HTTP server with port and shutdown timeout
+1. Create a new HTTP server
 
     ```go
-    api := httpserver.New("8080", 3*time.Second)
+    server := httpserver.New("8080", 3*time.Second)
     ```
 
-    The shutdown timeout determines how long the server waits for active requests to complete during graceful shutdown.
+    The first argument is the port, the second is the shutdown timeout for graceful shutdown.
 
-2. Add routes using `HandleFunc` for simple handlers
+2. Register handlers
 
     ```go
-    api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+    server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte("pong"))
     })
+
+    server.Handle("/health", healthHandler)
     ```
+
+    Use `HandleFunc` for handler functions or `Handle` for `http.Handler` implementations.
 
 3. Add middleware to the server
 
     ```go
-    api.Use(httpserver.NewTraceIDMiddleware(nil, ""))
-    api.Use(httpserver.NewRecoverMiddleware())
+    server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+    server.Use(httpserver.NewRecoverMiddleware())
     ```
 
-    `TraceIDMiddleware` adds a unique trace ID to each request context and response headers. `RecoverMiddleware` catches panics and returns HTTP 500 responses.
+    Middlewares are applied in the order they are added. `TraceIDMiddleware` adds a trace ID to all requests, `RecoverMiddleware` catches panics.
 
-4. Create a handler group for nested routes with scoped middleware
+4. Create a handler group for nested routes
 
     ```go
-    subApiGroup := httpserver.NewHandlerGroup()
+    apiGroup := httpserver.NewHandlerGroup()
 
-    subApiGroup.HandleFunc("/clock", func(w http.ResponseWriter, r *http.Request) {
-        w.Write([]byte(time.Now().String()))
-    })
+    apiGroup.HandleFunc("/users", usersHandler)
+    apiGroup.HandleFunc("/posts", postsHandler)
+    ```
 
-    subApiGroup.UseFunc(func(h http.Handler) http.Handler {
+    Handler groups let you organize routes with shared middleware.
+
+5. Add middleware specific to the group
+
+    ```go
+    apiGroup.UseFunc(func(h http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            log.InfoContext(r.Context(), "incoming request", "addr", r.RemoteAddr)
+            log.InfoContext(r.Context(), "API request", "path", r.URL.Path)
             h.ServeHTTP(w, r)
         })
     })
     ```
 
-5. Mount the handler group on the server
+    Use `UseFunc` to add inline middleware functions, or `Use` for `Middleware` implementations.
+
+6. Mount the group on the server
 
     ```go
-    api.HandleGroup("/subApi", subApiGroup)
+    server.HandleGroup("/api", apiGroup)
     ```
 
-    Now `/subApi/clock` is accessible and the logging middleware only applies to routes in this group.
+    The group is now accessible at `/api/users` and `/api/posts`. The path prefix is automatically stripped.
 
-6. Register the server with your application and run it
+7. Run the server
 
     ```go
-    app := application.New()
-    app.RegisterService("api", api)
-
-    if err := app.Run(ctx); err != nil {
-        log.ErrorContext(ctx, "app finished with error", "error", err)
+    ctx := context.Background()
+    if err := server.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "server error", "error", err)
     }
     ```
 
-7. Access your endpoints
+    Expected output:
 
     ```
-    GET http://localhost:8080/ping
-    GET http://localhost:8080/subApi/clock
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="starting http server" address=:8080
     ```
+
+    Press Ctrl+C to trigger graceful shutdown. The server waits for in-flight requests up to the shutdown timeout.
 
 </Steps>
 
@@ -96,75 +108,45 @@ Since `HTTPServer` implements the `Runner` interface, it can be registered as a 
 ```go
 app := application.New()
 
-api := httpserver.New("8080", 3*time.Second)
-api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+server := httpserver.New("8080", 3*time.Second)
+server.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte("pong"))
 })
 
-app.RegisterService("api", api)
+app.RegisterService("api", server)
 
 app.Run(ctx)
 ```
 
-## Built-in Middleware
+The server also implements `Healthchecker`, so its health status is automatically tracked by the application.
+
+## Built-in middlewares
 
 ### TraceIDMiddleware
 
-Adds a unique UUID trace ID to each request. The trace ID is:
-- Added to the request context (accessible via `log.TraceIDKey`)
-- Set in response headers (`Platforma-Trace-Id` by default)
+Adds a unique UUID trace ID to each request's context and response headers.
 
 ```go
-// Use defaults
-api.Use(httpserver.NewTraceIDMiddleware(nil, ""))
+// Uses defaults: log.TraceIDKey for context, "Platforma-Trace-Id" header
+server.Use(httpserver.NewTraceIDMiddleware(nil, ""))
 
 // Custom context key and header
-api.Use(httpserver.NewTraceIDMiddleware(myContextKey, "X-Request-Id"))
+server.Use(httpserver.NewTraceIDMiddleware(myContextKey, "X-Request-ID"))
 ```
+
+The trace ID is available in handlers via `r.Context().Value(log.TraceIDKey)`.
 
 ### RecoverMiddleware
 
-Catches panics in handlers, logs the error, and returns HTTP 500.
+Catches panics in handlers, logs the error with request context, and returns HTTP 500.
 
 ```go
-api.Use(httpserver.NewRecoverMiddleware())
-```
-
-## Custom Middleware
-
-You can create custom middleware in two ways:
-
-### Using MiddlewareFunc
-
-```go
-api.UseFunc(func(h http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // Before handler
-        h.ServeHTTP(w, r)
-        // After handler
-    })
-})
-```
-
-### Implementing Middleware interface
-
-```go
-type MyMiddleware struct{}
-
-func (m *MyMiddleware) Wrap(h http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // Before handler
-        h.ServeHTTP(w, r)
-        // After handler
-    })
-}
-
-api.Use(&MyMiddleware{})
+server.Use(httpserver.NewRecoverMiddleware())
 ```
 
 ## FileServer
 
-For serving static files:
+Serves static files from an `fs.FS` implementation:
 
 ```go
 //go:embed static
@@ -179,4 +161,4 @@ app.RegisterService("files", fileServer)
 import { Code } from '@astrojs/starlight/components';
 import importedCode from '../../../../../demo-app/cmd/api/main.go?raw';
 
-<Code code={importedCode} lang="go" title="api.go" />
+<Code code={importedCode} lang="go" title="httpserver.go" />

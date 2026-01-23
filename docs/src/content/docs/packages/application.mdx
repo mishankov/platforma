@@ -8,11 +8,16 @@ The `application` package provides the central orchestrator for managing the lif
 Core Components:
 
 - `Application`: Central orchestrator that manages startup tasks, services, databases, and health checks
-- `Runner`: Interface for defining services and startup tasks that can be executed
+- `Runner`: Interface that services and startup tasks must implement to be executed by the application
+- `RunnerFunc`: Function type that implements `Runner` for simple inline tasks
 - `StartupTaskConfig`: Configuration for startup tasks with name and abort-on-error behavior
-- `Domain`: Interface for self-contained modules that bundle repository, service, and handlers
+- `Domain`: Interface for self-contained modules that bundle repository and other components
 - `Healthchecker`: Interface for services that can report their health status
-- `HealthCheckHandler`: HTTP handler for exposing application health
+- `HealthCheckHandler`: HTTP handler for exposing application health as JSON
+- `ApplicationHealth`: Tracks overall application health and individual service statuses
+- `ServiceHealth`: Health status for a single service including start time and errors
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/application)
 
 ## Step-by-step guide
 
@@ -45,7 +50,9 @@ Core Components:
     }
     ```
 
-3. Register startup tasks that run before services start. You can use `RunnerFunc` helper for simple tasks
+    The `Run` method should block until the context is canceled or an error occurs.
+
+3. Register startup tasks that run before services start
 
     ```go
     app.OnStartFunc(func(ctx context.Context) error {
@@ -57,7 +64,7 @@ Core Components:
     })
     ```
 
-    Setting `AbortOnError` to `true` will stop the application if this task fails.
+    Setting `AbortOnError` to `true` stops the application if this task fails. Use `OnStart` for `Runner` implementations or `OnStartFunc` for inline functions.
 
 4. Register your service with the application
 
@@ -87,197 +94,60 @@ Core Components:
     ```
 
     Press Ctrl+C to gracefully shutdown the application.
+
 </Steps>
 
-## Register Methods
-
-The `Application` struct provides several methods for registering components. These methods allow you to add services, databases, repositories, and domains to your application.
-
-### RegisterService
-
-Registers a named service that will run concurrently when the application starts. Services must implement the `Runner` interface.
-
-```go
-func (a *Application) RegisterService(serviceName string, service Runner)
-```
-
-**Parameters:**
-- `serviceName` - Unique identifier for the service (used in logs and health checks)
-- `service` - Any type implementing the `Runner` interface
-
-**Example:**
-
-```go
-app := application.New()
-
-// Create and register an HTTP server
-api := httpserver.New("8080", 3*time.Second)
-api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-    w.Write([]byte("pong"))
-})
-app.RegisterService("api", api)
-
-// Create and register a queue processor
-processor := queue.NewProcessor(myQueue, myHandler, 5, 10*time.Second)
-app.RegisterService("queue-processor", processor)
-
-// Create and register a scheduler
-scheduler := scheduler.New()
-scheduler.AddJob("cleanup", cleanupTask, 1*time.Hour)
-app.RegisterService("scheduler", scheduler)
-
-app.Run(ctx)
-```
-
-If the service also implements the `Healthchecker` interface, its health status will automatically be tracked and available via `app.Health()`.
-
-### RegisterDatabase
-
-Registers a database connection with the application. All registered databases are automatically migrated when `app.Run()` is called.
-
-```go
-func (a *Application) RegisterDatabase(dbName string, db *database.Database)
-```
-
-**Parameters:**
-- `dbName` - Unique identifier for the database
-- `db` - A `*database.Database` instance
-
-**Example:**
-
-```go
-app := application.New()
-
-// Create database connection
-db, err := database.New("postgres://user:password@localhost:5432/mydb?sslmode=disable")
-if err != nil {
-    log.Fatal(err)
-}
-
-// Register database with the application
-app.RegisterDatabase("main", db)
-
-// You can register multiple databases
-analyticsDB, _ := database.New("postgres://user:password@localhost:5432/analytics?sslmode=disable")
-app.RegisterDatabase("analytics", analyticsDB)
-
-app.Run(ctx) // Migrations run automatically for all registered databases
-```
-
-### RegisterRepository
-
-Registers a repository with a specific database. The repository must implement the `migrator` interface (have a `Migrations()` method) to enable automatic schema migrations.
-
-```go
-func (a *Application) RegisterRepository(dbName string, repoName string, repository any)
-```
-
-**Parameters:**
-- `dbName` - Name of the database (must be registered with `RegisterDatabase` first)
-- `repoName` - Unique identifier for the repository
-- `repository` - Repository instance implementing the `migrator` interface
-
-**Example:**
-
-```go
-// Define a repository with migrations
-type UserRepository struct {
-    db *sqlx.DB
-}
-
-func (r *UserRepository) Migrations() []database.Migration {
-    return []database.Migration{
-        {
-            ID:   "create_users_table",
-            Up:   "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL)",
-            Down: "DROP TABLE users",
-        },
-        {
-            ID:   "add_created_at_column",
-            Up:   "ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW()",
-            Down: "ALTER TABLE users DROP COLUMN created_at",
-        },
-    }
-}
-
-// Register the repository
-app := application.New()
-db, _ := database.New(connStr)
-app.RegisterDatabase("main", db)
-
-userRepo := &UserRepository{db: db.Connection()}
-app.RegisterRepository("main", "users", userRepo)
-
-app.Run(ctx) // Migrations from userRepo.Migrations() will run automatically
-```
-
-### RegisterDomain
-
-Registers a domain (self-contained module) with the application. Domains bundle together a repository, service, and HTTP handlers. If a database name is provided, the domain's repository is automatically registered.
-
-```go
-func (a *Application) RegisterDomain(name, dbName string, domain Domain)
-```
-
-**Parameters:**
-- `name` - Unique identifier for the domain
-- `dbName` - Name of the database to associate with (pass empty string `""` if no database is needed)
-- `domain` - Domain instance implementing the `Domain` interface
-
-**Domain Interface:**
-
-```go
-type Domain interface {
-    GetRepository() any
-}
-```
-
-**Example:**
-
-```go
-app := application.New()
-
-// Setup database
-db, _ := database.New(connStr)
-app.RegisterDatabase("main", db)
-
-// Create and register auth domain
-authDomain := auth.New(
-    db.Connection(),
-    sessionStorage,
-    "session_id",
-    auth.DefaultUsernameValidator,
-    auth.DefaultPasswordValidator,
-)
-app.RegisterDomain("auth", "main", authDomain)
-
-// Mount auth endpoints on the HTTP server
-api := httpserver.New("8080", 3*time.Second)
-api.HandleGroup("/auth", authDomain.HandleGroup)
-
-// Use auth middleware for protected routes
-protectedGroup := httpserver.NewHandlerGroup()
-protectedGroup.Use(authDomain.Middleware)
-protectedGroup.HandleFunc("/profile", profileHandler)
-api.HandleGroup("/api", protectedGroup)
-
-app.RegisterService("api", api)
-app.Run(ctx)
-```
-
-## Execution Order
+## Execution order
 
 When you call `app.Run(ctx)`, the following happens in order:
 
-1. **Database migrations** - All registered databases are migrated
+1. **Database migrations** - All registered databases run their migrations
 2. **Startup tasks** - Tasks run sequentially in registration order
 3. **Services** - All services start concurrently in separate goroutines
 4. **Wait** - Application waits for context cancellation (Ctrl+C)
 5. **Shutdown** - Services receive context cancellation for graceful shutdown
 
-## Health Checks
+## Register methods
 
-Services that implement the `Healthchecker` interface will automatically have their health status tracked:
+### RegisterService
+
+Registers a named service that runs concurrently when the application starts.
+
+```go
+app.RegisterService("api", httpServer)
+app.RegisterService("queue-processor", processor)
+```
+
+If the service implements `Healthchecker`, its health status is automatically tracked.
+
+### RegisterDatabase
+
+Registers a database connection. All registered databases are migrated automatically when `Run` is called.
+
+```go
+db, _ := database.New("postgres://user:pass@localhost:5432/mydb?sslmode=disable")
+app.RegisterDatabase("main", db)
+```
+
+### RegisterRepository
+
+Registers a repository with a database. The repository must have a `Migrations()` method.
+
+```go
+app.RegisterRepository("main", "users", userRepo)
+```
+
+### RegisterDomain
+
+Registers a domain module. If a database name is provided, the domain's repository is registered automatically.
+
+```go
+app.RegisterDomain("auth", "main", authDomain)
+```
+
+## Health checks
+
+Services implementing `Healthchecker` have their health tracked automatically:
 
 ```go
 type Healthchecker interface {
@@ -285,10 +155,42 @@ type Healthchecker interface {
 }
 ```
 
-You can expose application health via HTTP using `HealthCheckHandler`:
+Expose health via HTTP using `HealthCheckHandler`:
 
 ```go
 api.Handle("/health", application.NewHealthCheckHandler(app))
+```
+
+The response includes application start time and per-service status:
+
+```json
+{
+  "startedAt": "2025-01-01T12:00:00Z",
+  "services": {
+    "api": {
+      "status": "STARTED",
+      "startedAt": "2025-01-01T12:00:00Z"
+    }
+  }
+}
+```
+
+## Error handling
+
+The application returns specific error types:
+
+- `ErrStartupTaskFailed` - Returned when a startup task with `AbortOnError: true` fails
+- `ErrDatabaseMigrationFailed` - Returned when database migration fails
+
+Both error types support unwrapping to get the underlying error:
+
+```go
+if err := app.Run(ctx); err != nil {
+    var migrationErr *application.ErrDatabaseMigrationFailed
+    if errors.As(err, &migrationErr) {
+        log.ErrorContext(ctx, "migration failed", "cause", migrationErr.Unwrap())
+    }
+}
 ```
 
 ## Complete example

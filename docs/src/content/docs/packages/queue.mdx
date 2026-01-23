@@ -3,20 +3,25 @@ title: queue
 ---
 import { LinkButton, Steps } from '@astrojs/starlight/components';
 
-The `queue` package provides a generic, concurrent job processing system with a channel-based queue implementation.
+The `queue` package provides a generic, concurrent job processing system with worker pools and graceful shutdown.
 
 Core Components:
 
-- `Processor`: Manages worker pool and coordinates job processing lifecycle. Implements `Runner` interface so it can be used as an `application` service.
-- `Handler`: Interface for defining job processing logic
-- `Provider`: Interface for custom queue storage implementations
-- `ChanQueue`: Built-in channel-based queue implementation
+- `Processor[T]`: Manages a pool of workers to process jobs from a queue. Implements `Runner` interface so it can be used as an `application` service.
+- `Handler[T]`: Interface for processing jobs with a `Handle(ctx context.Context, job T)` method.
+- `HandlerFunc[T]`: Function type that implements `Handler` for inline handler definitions.
+- `Provider[T]`: Interface for queue implementations, allowing custom backends.
+- `ChanQueue[T]`: Built-in thread-safe channel-based queue implementation.
+- `ErrTimeout`: Error returned when an enqueue operation times out.
+- `ErrClosedQueue`: Error returned when attempting to operate on a closed queue.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/queue)
 
 ## Step-by-step guide
 
 <Steps>
 
-1. To use `Processor` first you need to define job type
+1. Define your job type
 
     ```go
     type job struct {
@@ -24,53 +29,65 @@ Core Components:
     }
     ```
 
-2. Then we need to implement handler. We will use `HandlerFunc` helper later so it enough for us to define a functions
+    Jobs can be any type. Use a struct for complex payloads.
+
+2. Create a handler function
 
     ```go
     func jobHandler(ctx context.Context, job job) {
-    	log.InfoContext(ctx, "job handled", "data", job.data)
+        log.InfoContext(ctx, "job handled", "data", job.data)
     }
-    ````
-
-3. Then create new instance of `ChanQueue`
-
-    ```go
-    q := queue.NewChanQueue[job](10, 3 * time.Second)
     ```
 
-    There we set channel buffer size to 10 and timeout to enqueue new jobs to 3 seconds. You should probably tweak those values to your needs.
+    The handler receives the job and a context with worker ID for logging.
 
-4. Then let's create new `Processor`
+3. Create a queue
+
+    ```go
+    q := queue.NewChanQueue[job](10, 3*time.Second)
+    ```
+
+    First argument is the buffer size, second is the enqueue timeout. When the buffer is full, enqueue blocks until timeout.
+
+4. Create a processor
 
     ```go
     p := queue.New(queue.HandlerFunc[job](jobHandler), q, 2, time.Second)
     ```
-    Besides handler and queue we set amount of workers and shutdown timeout to 1 second. `Processor` would use this time to drain jobs from queue after context cancellation.
 
-5. We are ready to start our processor and enqueue some jobs in it
+    Arguments: handler, queue provider, number of workers, shutdown timeout. The shutdown timeout allows workers to drain remaining jobs on shutdown.
+
+5. Start the processor
 
     ```go
-    ctx := context.Background()
-
     go p.Run(ctx)
-    time.Sleep(time.Millisecond)
+    ```
 
+    Run blocks until context is cancelled and all workers complete. Use a goroutine for non-blocking operation.
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="worker started" workerID=abc-123
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="worker started" workerID=def-456
+    ```
+
+6. Enqueue jobs
+
+    ```go
     p.Enqueue(ctx, job{data: 1})
     p.Enqueue(ctx, job{data: 2})
-    p.Enqueue(ctx, job{data: 3})
-
-    time.Sleep(time.Millisecond)
     ```
 
-6. Run this code and you will see output like this
+    Jobs are distributed to available workers. Enqueue returns an error if the queue is full (timeout) or closed.
+
+    Expected output:
 
     ```
-    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
-    time=2025-11-11T22:01:26.630+03:00 level=INFO msg="worker started"
-    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=1
-    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=3
-    time=2025-11-11T22:01:26.631+03:00 level=INFO msg="job handled" data=2
+    time=2025-01-01T12:00:00.001+00:00 level=INFO msg="job handled" workerID=abc-123 data=1
+    time=2025-01-01T12:00:00.001+00:00 level=INFO msg="job handled" workerID=def-456 data=2
     ```
+
 </Steps>
 
 ## Using with Application
@@ -80,13 +97,41 @@ Since `Processor` implements the `Runner` interface, it can be registered as a s
 ```go
 app := application.New()
 
-q := queue.NewChanQueue[job](10, 3*time.Second)
-p := queue.New(queue.HandlerFunc[job](jobHandler), q, 2, time.Second)
+q := queue.NewChanQueue[job](100, 5*time.Second)
+p := queue.New(queue.HandlerFunc[job](jobHandler), q, 4, 10*time.Second)
 
-app.RegisterService("job-processor", p)
+app.RegisterService("queue", p)
 
 app.Run(ctx)
 ```
+
+The processor starts when the application runs and gracefully shuts down with it.
+
+## Custom queue providers
+
+Implement the `Provider` interface to use custom queue backends like Redis, RabbitMQ, or databases:
+
+```go
+type Provider[T any] interface {
+    Open(ctx context.Context) error
+    Close(ctx context.Context) error
+    EnqueueJob(ctx context.Context, job T) error
+    GetJobChan(ctx context.Context) (chan T, error)
+}
+```
+
+The `Open` and `Close` methods handle connection lifecycle. `GetJobChan` returns the channel that workers read from.
+
+## Error handling
+
+The package provides two error types for queue operations:
+
+| Error | Condition |
+|-------|-----------|
+| `ErrTimeout` | Enqueue operation timed out (buffer full) |
+| `ErrClosedQueue` | Attempted operation on a closed queue |
+
+Workers recover from panics automatically and log the error without crashing the processor.
 
 ## Complete example
 
