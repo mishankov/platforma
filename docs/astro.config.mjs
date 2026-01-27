@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 export default defineConfig({
@@ -34,6 +35,28 @@ export default defineConfig({
         {
           slug: "cli",
         },
+        {
+          label: "AI docs",
+          items: [
+            {
+              label: "llms.txt",
+              link: "/llms.txt",
+            },
+            {
+              label: "llms-small.txt",
+              link: "/llms-small.txt",
+            },
+            {
+              label: "llms-full.txt",
+              link: "/llms-full.txt",
+            },
+          ],
+        },
+      ],
+      plugins: [
+        starlightLlmsTxt({
+          projectName: "Platforma",
+        }),
       ],
     }),
   ],
