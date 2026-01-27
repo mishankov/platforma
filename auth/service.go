@@ -33,10 +33,10 @@ type Service struct {
 	sessionCookieName string
 	usernameValidator func(string) error
 	passwordValidator func(string) error
-	cleanupEnqueuer   CleanupEnqueuer
+	cleanupEnqueuer   cleanupEnqueuer
 }
 
-func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer CleanupEnqueuer) *Service {
+func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer cleanupEnqueuer) *Service {
 	if usernameValidator == nil {
 		usernameValidator = defaultUsernameValidator
 	}
