@@ -17,12 +17,14 @@ type repository interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	Create(ctx context.Context, user *User) error
 	UpdatePassword(ctx context.Context, id, password, salt string) error
+	Delete(ctx context.Context, id string) error
 }
 
 type authStorage interface {
 	GetUserIdFromSessionId(context.Context, string) (string, error)
 	CreateSessionForUser(context.Context, string) (string, error)
 	DeleteSession(ctx context.Context, sessionId string) error
+	DeleteSessionsByUserId(ctx context.Context, userId string) error
 }
 
 type Service struct {
@@ -31,9 +33,10 @@ type Service struct {
 	sessionCookieName string
 	usernameValidator func(string) error
 	passwordValidator func(string) error
+	cleanupEnqueuer   cleanupEnqueuer
 }
 
-func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error) *Service {
+func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer cleanupEnqueuer) *Service {
 	if usernameValidator == nil {
 		usernameValidator = defaultUsernameValidator
 	}
@@ -48,6 +51,7 @@ func NewService(repo repository, authStorage authStorage, sessionCookieName stri
 		sessionCookieName: sessionCookieName,
 		usernameValidator: usernameValidator,
 		passwordValidator: passwordValidator,
+		cleanupEnqueuer:   cleanupEnqueuer,
 	}
 }
 
@@ -120,10 +124,6 @@ func (s *Service) CreateSessionFromUsernameAndPassword(ctx context.Context, user
 
 	session, err := s.authStorage.CreateSessionForUser(ctx, user.ID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get session: %w", err)
-	}
-
-	if err != nil {
 		return "", fmt.Errorf("failed to create session: %w", err)
 	}
 	return session, nil
@@ -171,6 +171,35 @@ func (s *Service) ChangePassword(ctx context.Context, currentPassword, newPasswo
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
+	return nil
+}
+
+func (s *Service) DeleteUser(ctx context.Context) error {
+	user := UserFromContext(ctx)
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	err := s.authStorage.DeleteSessionsByUserId(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user sessions: %w", err)
+	}
+
+	err = s.repo.Delete(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if s.cleanupEnqueuer != nil {
+		job := UserCleanupJob{
+			UserID:    user.ID,
+			DeletedAt: time.Now(),
+		}
+		if err := s.cleanupEnqueuer.Enqueue(ctx, job); err != nil {
+			log.ErrorContext(ctx, "failed to enqueue cleanup job", "error", err, "user_id", user.ID)
+		}
+	}
+
 	return nil
 }
 

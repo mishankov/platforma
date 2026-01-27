@@ -15,9 +15,9 @@ func (d *Domain) GetRepository() any {
 	return d.Repository
 }
 
-func New(db db, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error) *Domain {
+func New(db db, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer cleanupEnqueuer) *Domain {
 	repository := NewRepository(db)
-	service := NewService(repository, authStorage, sessionCookieName, usernameValidator, passwordValidator)
+	service := NewService(repository, authStorage, sessionCookieName, usernameValidator, passwordValidator, cleanupEnqueuer)
 
 	authMiddleware := NewAuthenticationMiddleware(service)
 	registerHandler := NewRegisterHandler(service)
@@ -25,6 +25,7 @@ func New(db db, authStorage authStorage, sessionCookieName string, usernameValid
 	logoutHandler := NewLogoutHandler(service)
 	getUserHandler := NewGetHandler(service)
 	changePasswordHandler := authMiddleware.Wrap(NewChangePasswordHandler(service))
+	deleteHandler := authMiddleware.Wrap(NewDeleteHandler(service))
 
 	authAPI := httpserver.NewHandlerGroup()
 	authAPI.Handle("POST /register", registerHandler)
@@ -32,6 +33,7 @@ func New(db db, authStorage authStorage, sessionCookieName string, usernameValid
 	authAPI.Handle("POST /logout", logoutHandler)
 	authAPI.Handle("GET /me", getUserHandler)
 	authAPI.Handle("POST /change-password", changePasswordHandler)
+	authAPI.Handle("DELETE /me", deleteHandler)
 
 	return &Domain{
 		Repository:  repository,
