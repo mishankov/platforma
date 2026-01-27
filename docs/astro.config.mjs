@@ -30,6 +30,7 @@ export default defineConfig({
             "packages/log",
             "packages/queue",
             "packages/scheduler",
+            "packages/auth",
           ],
         },
         {

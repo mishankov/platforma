@@ -1,0 +1,221 @@
+---
+title: auth
+---
+import { LinkButton, Steps } from '@astrojs/starlight/components';
+
+The `auth` package provides session-based authentication with username/password credentials, bundled as a self-contained domain.
+
+Core Components:
+
+- `Domain`: Bundles repository, service, HTTP handlers, and middleware together. Implements `application.Domain` interface for registration with an `Application`.
+- `Service`: Core authentication logic for user registration, login/logout, password changes, and user deletion.
+- `Repository`: PostgreSQL storage for users with automatic schema migrations.
+- `User`: User model with ID, username, hashed password, salt, timestamps, and status.
+- `AuthenticationMiddleware`: HTTP middleware that validates session cookies and injects the authenticated user into request context.
+- `UserCleanupJob`: Job struct for enqueueing post-deletion cleanup tasks.
+- `UserFromContext`: Helper function to retrieve the authenticated user from request context.
+
+[Full package docs at pkg.go.dev](https://pkg.go.dev/github.com/platforma-dev/platforma/auth)
+
+## Step-by-step guide
+
+<Steps>
+
+1. Set up the database and session storage
+
+    ```go
+    db, err := database.New("postgres://user:pass@localhost:5432/mydb?sslmode=disable")
+    if err != nil {
+        log.ErrorContext(ctx, "failed to connect to database", "error", err)
+        return
+    }
+
+    sessionDomain := session.New(db.Connection())
+    ```
+
+    The auth package requires a database connection and session storage. The `session` package provides a compatible session storage implementation.
+
+2. Create the auth domain
+
+    ```go
+    authDomain := auth.New(
+        db.Connection(),        // database connection
+        sessionDomain.Service,  // session storage
+        "session_id",           // cookie name for sessions
+        nil,                    // username validator (nil uses default)
+        nil,                    // password validator (nil uses default)
+        nil,                    // cleanup job enqueuer (optional)
+    )
+    ```
+
+    Default validators require usernames to be 5-20 characters and passwords to be 8-100 characters. Pass custom validator functions to override.
+
+3. Register domains with the application
+
+    ```go
+    app := application.New()
+
+    app.RegisterDatabase("main", db)
+    app.RegisterDomain("session", "main", sessionDomain)
+    app.RegisterDomain("auth", "main", authDomain)
+    ```
+
+    Registering domains with a database name automatically registers their repositories for migrations.
+
+4. Create an HTTP server and mount the auth endpoints
+
+    ```go
+    api := httpserver.New("8080", 3*time.Second)
+
+    api.HandleGroup("/auth", authDomain.HandleGroup)
+    ```
+
+    This exposes the following endpoints:
+    - `POST /auth/register` - Create a new user
+    - `POST /auth/login` - Login and receive session cookie
+    - `POST /auth/logout` - Clear session
+    - `GET /auth/me` - Get current user info
+    - `POST /auth/change-password` - Change password (requires auth)
+    - `DELETE /auth/me` - Delete user account (requires auth)
+
+5. Protect routes with authentication middleware
+
+    ```go
+    protectedGroup := httpserver.NewHandlerGroup()
+    protectedGroup.Use(authDomain.Middleware)
+
+    protectedGroup.HandleFunc("/profile", func(w http.ResponseWriter, r *http.Request) {
+        user := auth.UserFromContext(r.Context())
+        if user != nil {
+            w.Write([]byte("Hello, " + user.Username))
+        }
+    })
+
+    api.HandleGroup("/api", protectedGroup)
+    ```
+
+    The `AuthenticationMiddleware` returns 401 Unauthorized if no valid session is found. Use `auth.UserFromContext()` to access the authenticated user.
+
+6. Register the server and run the application
+
+    ```go
+    app.RegisterService("api", api)
+
+    if err := app.Run(ctx); err != nil {
+        log.ErrorContext(ctx, "app finished with error", "error", err)
+    }
+    ```
+
+    Expected output:
+
+    ```
+    time=2025-01-01T12:00:00.000+00:00 level=INFO msg="running migrations" database=main
+    time=2025-01-01T12:00:00.010+00:00 level=INFO msg="starting service" serviceName=api
+    time=2025-01-01T12:00:00.010+00:00 level=INFO msg="starting http server" address=:8080
+    ```
+
+</Steps>
+
+## Using with Application
+
+The `auth.Domain` implements the `application.Domain` interface, so it integrates seamlessly with an `Application`:
+
+```go
+app := application.New()
+
+// Set up database
+db, _ := database.New("postgres://user:pass@localhost:5432/mydb?sslmode=disable")
+app.RegisterDatabase("main", db)
+
+// Set up session and auth domains
+sessionDomain := session.New(db.Connection())
+app.RegisterDomain("session", "main", sessionDomain)
+
+authDomain := auth.New(db.Connection(), sessionDomain.Service, "session_id", nil, nil, nil)
+app.RegisterDomain("auth", "main", authDomain)
+
+// Set up HTTP server with auth endpoints
+api := httpserver.New("8080", 3*time.Second)
+api.HandleGroup("/auth", authDomain.HandleGroup)
+app.RegisterService("api", api)
+
+app.Run(ctx)
+```
+
+## HTTP endpoints
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/register` | POST | No | Create new user with `{"login": "...", "password": "..."}` |
+| `/login` | POST | No | Login with `{"login": "...", "password": "..."}`, sets session cookie |
+| `/logout` | POST | No | Clears session cookie |
+| `/me` | GET | No | Returns `{"username": "..."}` if authenticated, 401 otherwise |
+| `/change-password` | POST | Yes | Change password with `{"currentPassword": "...", "newPassword": "..."}` |
+| `/me` | DELETE | Yes | Delete user account and all sessions |
+
+## Custom validators
+
+Override the default username and password validation:
+
+```go
+usernameValidator := func(username string) error {
+    if len(username) < 3 {
+        return errors.New("username must be at least 3 characters")
+    }
+    if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(username) {
+        return errors.New("username can only contain letters, numbers, and underscores")
+    }
+    return nil
+}
+
+passwordValidator := func(password string) error {
+    if len(password) < 12 {
+        return errors.New("password must be at least 12 characters")
+    }
+    return nil
+}
+
+authDomain := auth.New(db.Connection(), sessionDomain.Service, "session_id", 
+    usernameValidator, passwordValidator, nil)
+```
+
+## User cleanup jobs
+
+When a user is deleted, you can enqueue cleanup jobs to handle related data. The `queue.Processor` implements the required interface directly:
+
+```go
+// Create a processor for cleanup jobs
+cleanupHandler := queue.HandlerFunc[auth.UserCleanupJob](func(ctx context.Context, job auth.UserCleanupJob) {
+    log.InfoContext(ctx, "cleaning up user data", "user_id", job.UserID, "deleted_at", job.DeletedAt)
+    // Delete user's files, posts, comments, etc.
+})
+
+cleanupQueue := queue.NewChanQueue[auth.UserCleanupJob](100, 5*time.Second)
+cleanupProcessor := queue.New(cleanupHandler, cleanupQueue, 2, 10*time.Second)
+
+// Pass processor directly to auth.New()
+authDomain := auth.New(db.Connection(), sessionDomain.Service, "session_id", 
+    nil, nil, cleanupProcessor)
+
+// Register processor as a service
+app.RegisterService("cleanup", cleanupProcessor)
+```
+
+The `UserCleanupJob` contains `UserID` and `DeletedAt` fields for processing cleanup tasks asynchronously.
+
+## Error types
+
+The package exports these errors for handling specific cases:
+
+- `ErrUserNotFound` - User does not exist
+- `ErrWrongUserOrPassword` - Invalid credentials during login
+- `ErrInvalidUsername` / `ErrShortUsername` / `ErrLongUsername` - Username validation failed
+- `ErrInvalidPassword` / `ErrShortPassword` / `ErrLongPassword` - Password validation failed
+- `ErrCurrentPasswordIncorrect` - Current password wrong during password change
+
+## Complete example
+
+import { Code } from '@astrojs/starlight/components';
+import importedCode from '../../../../../demo-app/cmd/auth/main.go?raw';
+
+<Code code={importedCode} lang="go" title="auth.go" />
