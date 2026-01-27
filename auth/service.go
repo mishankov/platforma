@@ -33,9 +33,10 @@ type Service struct {
 	sessionCookieName string
 	usernameValidator func(string) error
 	passwordValidator func(string) error
+	cleanupEnqueuer   CleanupEnqueuer
 }
 
-func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error) *Service {
+func NewService(repo repository, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer CleanupEnqueuer) *Service {
 	if usernameValidator == nil {
 		usernameValidator = defaultUsernameValidator
 	}
@@ -50,6 +51,7 @@ func NewService(repo repository, authStorage authStorage, sessionCookieName stri
 		sessionCookieName: sessionCookieName,
 		usernameValidator: usernameValidator,
 		passwordValidator: passwordValidator,
+		cleanupEnqueuer:   cleanupEnqueuer,
 	}
 }
 
@@ -178,17 +180,26 @@ func (s *Service) DeleteUser(ctx context.Context) error {
 		return ErrUserNotFound
 	}
 
-	// Delete all user sessions first
 	err := s.authStorage.DeleteSessionsByUserId(ctx, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user sessions: %w", err)
 	}
 
-	// Delete the user
 	err = s.repo.Delete(ctx, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
+
+	if s.cleanupEnqueuer != nil {
+		job := UserCleanupJob{
+			UserID:    user.ID,
+			DeletedAt: time.Now(),
+		}
+		if err := s.cleanupEnqueuer.Enqueue(ctx, job); err != nil {
+			log.ErrorContext(ctx, "failed to enqueue cleanup job", "error", err, "user_id", user.ID)
+		}
+	}
+
 	return nil
 }
 

@@ -15,9 +15,9 @@ func (d *Domain) GetRepository() any {
 	return d.Repository
 }
 
-func New(db db, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error) *Domain {
+func New(db db, authStorage authStorage, sessionCookieName string, usernameValidator, passwordValidator func(string) error, cleanupEnqueuer CleanupEnqueuer) *Domain {
 	repository := NewRepository(db)
-	service := NewService(repository, authStorage, sessionCookieName, usernameValidator, passwordValidator)
+	service := NewService(repository, authStorage, sessionCookieName, usernameValidator, passwordValidator, cleanupEnqueuer)
 
 	authMiddleware := NewAuthenticationMiddleware(service)
 	registerHandler := NewRegisterHandler(service)
