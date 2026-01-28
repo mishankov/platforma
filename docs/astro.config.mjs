@@ -5,7 +5,7 @@ import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://mishankov.github.io",
+  site: "https://platforma-dev.github.io",
   base: "/platforma",
   integrations: [
     starlight({
